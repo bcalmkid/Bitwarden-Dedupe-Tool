@@ -239,12 +239,12 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 800px;
+            table-layout: fixed;
+            /* Prevents columns from shifting */
         }
 
         thead th {
             background: var(--header-bg);
-            /* Distinct color for header */
             color: var(--text-heading);
             font-size: 0.75rem;
             font-weight: 600;
@@ -256,6 +256,26 @@
             z-index: 80;
             border-bottom: 2px solid var(--border);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        th:nth-child(1) {
+            width: 50px;
+        }
+
+        th:nth-child(2) {
+            width: 40%;
+        }
+
+        th:nth-child(3) {
+            width: 22%;
+        }
+
+        th:nth-child(4) {
+            width: 22%;
+        }
+
+        th:nth-child(5) {
+            width: 140px;
         }
 
         tbody tr {
@@ -311,23 +331,67 @@
             color: var(--text-heading);
         }
 
+        /* Truncation & Popover System */
+        .truncator {
+            position: relative;
+            max-width: 100%;
+        }
+
+        .truncator-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
+            cursor: help;
+        }
+
+        .truncator-popover {
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            padding: 8px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 200;
+            width: max-content;
+            min-width: 100%;
+            max-width: 400px;
+            white-space: normal;
+            word-break: break-all;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            transition: opacity 0.1s ease;
+            color: var(--text-heading);
+            font-size: inherit;
+        }
+
+        .truncator:hover .truncator-popover {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
         .field-sub {
             font-size: 0.8rem;
             color: var(--text-muted);
-            word-break: break-all;
         }
 
         .password-container {
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 0.5rem;
+            position: relative;
         }
 
         .password-val {
             font-family: 'JetBrains Mono', 'Fira Code', monospace;
             letter-spacing: 1px;
             color: var(--primary-light);
+            display: block;
         }
+
 
         /* Buttons & Inputs */
         .btn {
@@ -504,10 +568,12 @@
             <div class="selection-bar" id="selectionBar">
                 <span id="selectionText" style="font-weight: 600;">0 items selected</span>
                 <div class="action-group">
-                    <button class="btn btn-outline" style="background: rgba(255,255,255,0.1); border:none;"
-                        onclick="bulkAction(false)">Restore selection</button>
-                    <button class="btn btn-primary" style="background: var(--danger); box-shadow: none;"
-                        onclick="bulkAction(true)">Delete selection</button>
+                    <button id="selectionRestoreBtn" class="btn btn-outline"
+                        style="background: rgba(255,255,255,0.1); border:none;" onclick="bulkAction(false)">Restore
+                        selection</button>
+                    <button id="selectionDeleteBtn" class="btn btn-primary"
+                        style="background: var(--danger); box-shadow: none;" onclick="bulkAction(true)">Delete
+                        selection</button>
                     <button class="btn btn-outline" style="color: #fff; border:none;"
                         onclick="clearSelection()">Cancel</button>
                 </div>
@@ -663,7 +729,7 @@
                 const login = item.login || {};
                 const name = item.name || 'Unnamed';
                 const uri = (login.uris && login.uris.length > 0) ? login.uris[0].uri : "N/A";
-                const isRevealed = showAllPasswords || showPasswords.has(index);
+                const isRevealed = showAllPasswords !== showPasswords.has(index);
                 const isSelected = selectedIndices.has(index);
                 const isDeleted = item._isDeleted;
 
@@ -677,7 +743,10 @@
                         <td>
                             <div class="field-box">
                                 <span class="field-value">${name}</span>
-                                <span class="field-sub">${uri}</span>
+                                <div class="truncator field-sub">
+                                    <span class="truncator-text">${uri}</span>
+                                    <span class="truncator-popover">${uri}</span>
+                                </div>
                             </div>
                         </td>
                         <td>
@@ -689,9 +758,12 @@
                         </td>
                         <td>
                             <div class="field-box">
-                                <div class="password-container">
-                                    <span class="password-val">${isRevealed ? (login.password || 'none') : '••••••••'}</span>
-                                    <button class="btn btn-outline" style="padding:2px 6px; font-size:10px;" 
+                                <div class="password-container" style="display:flex; justify-content:space-between; align-items:center;">
+                                    <div class="truncator password-val" style="flex:1; margin-right:8px;">
+                                        <span class="truncator-text">${isRevealed ? (login.password || 'none') : '••••••••'}</span>
+                                        <span class="truncator-popover">${isRevealed ? (login.password || 'none') : '••••••••'}</span>
+                                    </div>
+                                    <button class="btn btn-outline" style="padding:2px 6px; font-size:10px; flex-shrink: 0;" 
                                             onclick="event.stopPropagation(); togglePassword(${index})">
                                         ${isRevealed ? 'Hide' : 'Show'}
                                     </button>
@@ -721,16 +793,24 @@
             // Localized update for the specific row's password cell
             const row = document.getElementById(`row-${idx}`);
             if (row) {
-                const isRevealed = showAllPasswords || showPasswords.has(idx);
+                const isRevealed = showAllPasswords !== showPasswords.has(idx);
                 const login = bitwardenData.items[idx].login || {};
+                const text = isRevealed ? (login.password || 'none') : '••••••••';
+
                 const container = row.querySelector('.password-container');
-                container.querySelector('.password-val').textContent = isRevealed ? (login.password || 'none') : '••••••••';
-                container.querySelector('button').textContent = isRevealed ? 'Hide' : 'Show';
+                const tText = container.querySelector('.truncator-text');
+                const tPop = container.querySelector('.truncator-popover');
+                const btn = container.querySelector('button');
+
+                if (tText) tText.textContent = text;
+                if (tPop) tPop.textContent = text;
+                if (btn) btn.textContent = isRevealed ? 'Hide' : 'Show';
             }
         }
 
         function toggleBulkReveal() {
             showAllPasswords = !showAllPasswords;
+            showPasswords.clear(); // Reset individual overrides when switching global mode
             const btn = document.getElementById('bulkRevealBtn');
             btn.textContent = showAllPasswords ? 'Hide all passwords' : 'Reveal all passwords';
             renderTable();
@@ -772,6 +852,17 @@
             selectionBar.classList.toggle('visible', visible);
             document.getElementById('contentShifter').classList.toggle('shifted', visible);
             document.getElementById('selectionText').textContent = `${count} items selected`;
+
+            if (visible) {
+                let hasDeleted = false;
+                let hasActive = false;
+                selectedIndices.forEach(idx => {
+                    if (bitwardenData.items[idx]._isDeleted) hasDeleted = true;
+                    else hasActive = true;
+                });
+                document.getElementById('selectionRestoreBtn').disabled = !hasDeleted;
+                document.getElementById('selectionDeleteBtn').disabled = !hasActive;
+            }
         }
 
         function updateStats() {
