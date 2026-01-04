@@ -306,12 +306,11 @@
         }
 
         /* Password column */
-        th:nth-child(4) {
-            width: 140px;
-            text-align: right;
+        th:nth-child(4),
+        .action-cell {
+            width: 120px;
+            text-align: center;
         }
-
-        /* Action column */
 
         tbody tr {
             border-bottom: 1px solid var(--border);
@@ -335,11 +334,6 @@
             padding: 1rem;
             vertical-align: middle;
             text-align: left;
-        }
-
-        .action-cell {
-            text-align: center;
-            width: 140px;
         }
 
         .checkbox-cell {
@@ -450,6 +444,16 @@
 
         .btn-primary:hover {
             background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background: var(--danger-hover);
             transform: translateY(-1px);
         }
 
@@ -658,11 +662,11 @@
             <div class="selection-bar" id="selectionBar">
                 <span id="selectionText" style="font-weight: 600;">0 items selected</span>
                 <div class="action-group">
-                    <button id="selectionRestoreBtn" class="btn btn-primary" onclick="bulkAction(false)">
-                        Restore selection
-                    </button>
-                    <button id="selectionDeleteBtn" class="btn btn-danger" onclick="bulkAction(true)">
+                    <button id="selectionDeleteBtn" class="btn btn-primary" onclick="bulkAction(true)">
                         Delete selection
+                    </button>
+                    <button id="selectionRestoreBtn" class="btn btn-outline" onclick="bulkAction(false)">
+                        Restore selection
                     </button>
                     <button class="btn btn-outline" onclick="clearSelection()">
                         Cancel
@@ -708,7 +712,7 @@
                                 </th>
                                 <th scope="col">Name</th>
                                 <th scope="col">Password</th>
-                                <th scope="col" style="text-align: right;">Action</th>
+                                <th scope="col" class="action-cell">Action</th>
                             </tr>
                         </thead>
                         <tbody id="itemsTableBody">
@@ -900,7 +904,7 @@
                         </td>
                         <td class="action-cell">
                             <button class="btn ${isDeleted ? 'btn-outline' : 'btn-danger'}" 
-                                    style="padding: 0.4rem 0.8rem; width: 100px; justify-content: center;"
+                                    style="min-width: 80px; justify-content: center;"
                                     onclick="event.stopPropagation(); toggleItem(${index})">
                                 ${isDeleted ? 'Restore' : 'Delete'}
                             </button>
