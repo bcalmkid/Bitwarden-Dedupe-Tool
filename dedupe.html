@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bitwarden De-duplicator</title>
+    <title>Bitwarden De-duplicator | Secure Vault Optimization</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -13,306 +13,389 @@
     <style>
         :root {
             --primary: #3b82f6;
-            --primary-hover: #2563eb;
-            --bg: #0f172a;
-            --surface: #1e293b;
-            --surface-hover: #334155;
-            --text: #f8fafc;
-            --text-dim: #94a3b8;
-            --danger: #ef4444;
-            --danger-hover: #dc2626;
-            --success: #10b981;
-            --glass: rgba(30, 41, 59, 0.7);
-            --border: rgba(255, 255, 255, 0.1);
-            --sidebar-w: 320px;
+            --primary-light: #60a5fa;
+            --bg: #0a0f1d;
+            --surface: #161d31;
+            --surface-hover: #1e273e;
+            --header-bg: #1e273e;
+            --sidebar-bg: #111827;
+            --border: #283046;
+            --text: #d0d2d6;
+            --text-heading: #f8fafc;
+            --text-muted: #b4b7bd;
+            --danger: #ea5455;
+            --success: #28c76f;
+            --accent: #7367f0;
+            --sidebar-w: 280px;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            outline-color: var(--primary);
         }
 
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg);
-            background-image:
-                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.1) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.1) 0px, transparent 50%);
             color: var(--text);
-            min-height: 100vh;
+            height: 100vh;
             overflow: hidden;
+            line-height: 1.5;
         }
 
         h1,
         h2,
-        h3 {
+        h3,
+        h4 {
             font-family: 'Outfit', sans-serif;
+            color: var(--text-heading);
+            font-weight: 600;
         }
 
-        .app-container {
+        /* Layout Structure */
+        .app-shell {
             display: grid;
-            grid-template-rows: auto 1fr;
+            grid-template-columns: var(--sidebar-w) 1fr;
+            grid-template-rows: 70px 1fr;
             height: 100vh;
             width: 100vw;
         }
 
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 2rem;
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(20px);
+        /* Top Navbar */
+        .navbar {
+            grid-column: 1 / -1;
+            background: var(--surface);
             border-bottom: 1px solid var(--border);
-            z-index: 100;
-        }
-
-        .logo-area h1 {
-            font-size: 1.6rem;
-            font-weight: 700;
-            background: linear-gradient(to right, #60a5fa, #a78bfa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .main-content {
             display: flex;
-            overflow: hidden;
-            height: 100%;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            z-index: 100;
+            box-shadow: 0 4px 20px 0 rgba(0, 0, 0, .05);
         }
 
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .brand-logo {
+            font-size: 1.5rem;
+        }
+
+        .brand-text {
+            font-size: 1.25rem;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        /* Sidebar Navigation */
         .sidebar {
-            width: var(--sidebar-w);
-            background: rgba(0, 0, 0, 0.2);
+            background: var(--sidebar-bg);
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        .sidebar-header {
-            padding: 1.5rem;
+        .sidebar-search {
+            padding: 1rem;
             border-bottom: 1px solid var(--border);
         }
 
-        .sidebar-list {
+        .search-input {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.6rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            transition: var(--transition);
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .sidebar-nav {
             flex: 1;
             overflow-y: auto;
-            padding: 1rem;
+            padding: 0.75rem;
         }
 
-        .url-tab {
-            padding: 0.8rem 1rem;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 0.5rem;
-            border: 1px solid transparent;
+        .nav-item {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 0.25rem;
+            transition: var(--transition);
+            font-size: 0.9rem;
+            color: var(--text-muted);
         }
 
-        .url-tab:hover {
+        .nav-item:hover {
             background: var(--surface);
+            color: var(--text-heading);
         }
 
-        .url-tab.active {
-            background: var(--surface-hover);
-            border-color: var(--primary);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        .nav-item.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
 
-        .url-tab .url-name {
-            font-size: 0.85rem;
-            font-weight: 500;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            max-width: 200px;
-        }
-
-        .url-tab .url-count {
-            font-size: 0.7rem;
-            background: rgba(59, 130, 246, 0.2);
-            color: var(--primary);
+        .nav-item .count {
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.15);
             padding: 2px 8px;
-            border-radius: 20px;
-            font-weight: 700;
+            border-radius: 12px;
+            font-weight: 600;
         }
 
+        /* Main Content Viewport */
         .viewport {
-            flex: 1;
-            padding: 2rem;
-            background: rgba(15, 23, 42, 0.4);
+            background: var(--bg);
             display: flex;
             flex-direction: column;
-            min-height: 0;
-            /* Important for flex child scrolling */
+            overflow: hidden;
+            position: relative;
         }
 
-        .view-controls {
-            flex-shrink: 0;
-            /* Don't squash buttons */
+        /* Fixed Toolbar */
+        .toolbar {
+            padding: 1.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
-            background: var(--surface);
-            padding: 1rem;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .action-group {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        /* Select Bar (Contextual) */
+        .selection-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--primary);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            transform: translateY(-100%);
+            transition: var(--transition);
+            z-index: 90;
+        }
+
+        .selection-bar.visible {
+            transform: translateY(0);
+        }
+
+        /* Table Container */
+        .table-wrap {
+            flex: 1;
+            overflow: auto;
+            margin: 1rem;
             border-radius: 12px;
             border: 1px solid var(--border);
-        }
-
-        .bulk-actions {
-            display: flex;
-            gap: 0.75rem;
-            align-items: center;
-        }
-
-        .controls {
-            display: flex;
-            gap: 0.75rem;
-            align-items: center;
-        }
-
-        .mode-selector {
             background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 0.6rem 0.8rem;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            outline: none;
-            cursor: pointer;
-        }
-
-        .btn {
-            padding: 0.6rem 1rem;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: none;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: var(--surface);
-            color: var(--text);
-            border: 1px solid var(--border);
-        }
-
-        .btn-danger {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-        }
-
-        .btn-restore {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--success);
-            border: 1px solid rgba(16, 185, 129, 0.2);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .table-card {
-            background: var(--surface);
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            overflow-y: auto;
-            /* Enable scrolling here */
-            flex: 1;
-            min-height: 0;
-            /* Force container to respect parent height */
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 800px;
         }
 
-        th {
-            background: var(--surface);
+        thead th {
+            background: var(--header-bg);
+            /* Distinct color for header */
+            color: var(--text-heading);
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
             padding: 1rem;
             text-align: left;
-            font-size: 0.7rem;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            z-index: 20;
             position: sticky;
             top: 0;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            z-index: 80;
+            border-bottom: 2px solid var(--border);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        tbody tr:hover {
+            background: var(--surface-hover);
+        }
+
+        tbody tr.selected {
+            background: rgba(59, 130, 246, 0.08);
+        }
+
+        tbody tr.deleted {
+            opacity: 0.4;
         }
 
         td {
             padding: 1rem;
-            border-bottom: 1px solid var(--border);
             vertical-align: middle;
+            text-align: left;
         }
 
-        .deleted-row {
-            opacity: 0.25;
-            background: rgba(0, 0, 0, 0.1);
+        .action-cell {
+            text-align: center;
+            width: 140px;
         }
 
-        .deleted-row td {
-            text-decoration: line-through;
+        .checkbox-cell {
+            width: 50px;
+            text-align: center;
         }
 
-        .label-pill {
-            display: inline-block;
-            font-size: 0.6rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            padding: 2px 6px;
-            border-radius: 4px;
-            margin-bottom: 4px;
-            letter-spacing: 0.5px;
+        /* Data Presentation */
+        .field-box {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
         }
 
-        .label-user {
-            background: rgba(59, 130, 246, 0.15);
-            color: #60a5fa;
+        .field-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--text-muted);
         }
 
-        .label-pass {
-            background: rgba(167, 139, 250, 0.15);
-            color: #a78bfa;
+        .field-value {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-heading);
         }
 
-        .label-url {
-            background: rgba(148, 163, 184, 0.1);
-            color: var(--text-dim);
+        .field-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            word-break: break-all;
         }
 
-        .checkbox-container {
+        .password-container {
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 0.5rem;
         }
 
-        input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+        .password-val {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            letter-spacing: 1px;
+            color: var(--primary-light);
+        }
+
+        /* Buttons & Inputs */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
             cursor: pointer;
-            accent-color: var(--primary);
+            border: none;
+            transition: var(--transition);
         }
 
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-outline:hover {
+            background: var(--surface-hover);
+            border-color: var(--text-muted);
+        }
+
+        .select-sm {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.5rem 2rem 0.5rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        /* Checkbox Styling */
+        .checkbox-cell {
+            width: 50px;
+            text-align: center;
+        }
+
+        .custom-checkbox {
+            width: 1.2rem;
+            height: 1.2rem;
+            appearance: none;
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            position: relative;
+            cursor: pointer;
+            transition: var(--transition);
+            background: var(--bg);
+        }
+
+        .custom-checkbox:checked {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .custom-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            color: #fff;
+            font-size: 0.8rem;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Upload States */
         .upload-overlay {
             position: fixed;
             inset: 0;
@@ -322,104 +405,141 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            text-align: center;
+            backdrop-filter: blur(20px);
         }
 
-        .upload-box {
+        .drop-zone {
             padding: 4rem;
             border: 2px dashed var(--border);
-            border-radius: 30px;
+            border-radius: 2rem;
             background: var(--surface);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: var(--transition);
         }
 
-        .upload-box:hover {
+        .drop-zone:hover {
             border-color: var(--primary);
-            transform: scale(1.02);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
         }
 
         .hidden {
             display: none !important;
         }
+
+        /* Accessibility: Skip to content */
+        .skip-link {
+            position: absolute;
+            top: -100px;
+            left: 0;
+            background: var(--primary);
+            color: #fff;
+            padding: 1rem;
+            z-index: 2000;
+            transition: top 0.2s;
+        }
+
+        .skip-link:focus {
+            top: 0;
+        }
     </style>
 </head>
 
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
     <div id="uploadOverlay" class="upload-overlay">
-        <div class="upload-box" onclick="document.getElementById('fileInput').click()">
-            <h1 style="margin-bottom: 1rem; font-size: 3rem;">📦</h1>
-            <h2 style="margin-bottom: 0.5rem;">Drop Bitwarden JSON</h2>
-            <p style="color: var(--text-dim);">Your data never leaves your computer.</p>
+        <div class="drop-zone" onclick="document.getElementById('fileInput').click()">
+            <div>
+                <h1 style="margin-bottom: 0.5rem;">Import Bitwarden Export</h1>
+                <p style="color: var(--text-muted);">Drop your .json file here to start cleaning.</p>
+            </div>
+            <button class="btn btn-primary">Choose File</button>
             <input type="file" id="fileInput" accept=".json" class="hidden">
         </div>
     </div>
 
-    <div class="app-container hidden" id="app">
-        <header>
-            <div class="logo-area">
-                <h1>BITWARDEN DEDUPE</h1>
+    <div class="app-shell hidden" id="app">
+        <nav class="navbar" role="navigation">
+            <div class="brand">
+                <h1 class="brand-text">Bitwarden <span style="font-weight: 300; opacity: 0.7;">Deduplicator</span></h1>
             </div>
-            <div class="controls">
-                <select id="dedupeMode" class="mode-selector">
-                    <option value="all">Strict: URL + User + Pass</option>
-                    <option value="user_pass">User + Pass (Multi-Site)</option>
-                    <option value="user">Username Only</option>
-                    <option value="pass">Password Only</option>
-                    <option value="incomplete">Incomplete (No User OR No Pass)</option>
-                </select>
-                <button class="btn btn-secondary" onclick="autoDedupe()">
-                    Auto Dedupe
-                </button>
-                <button class="btn btn-primary" onclick="downloadJSON()">
-                    Export Cleaned JSON
-                </button>
+            <div class="nav-actions">
+                <div id="statSummary" style="font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 1.5rem;">
+                    <span>Total: <strong id="totalCount" style="color: var(--text-heading)">0</strong></span>
+                    <span>Removed: <strong id="removedCount" style="color: var(--danger)">0</strong></span>
+                </div>
+                <button class="btn btn-primary" onclick="downloadJSON()">Export cleaned</button>
             </div>
-        </header>
+        </nav>
 
-        <div class="main-content">
-            <aside class="sidebar">
-                <div class="sidebar-header">
-                    <h3 style="font-size: 0.9rem; color: var(--text-dim); text-transform: uppercase;">Groups by URL</h3>
-                </div>
-                <div class="sidebar-list" id="sidebarList">
-                </div>
-            </aside>
+        <aside class="sidebar">
+            <div class="sidebar-search">
+                <input type="text" class="search-input" placeholder="Search domains..." id="sidebarSearch"
+                    oninput="renderSidebar()">
+            </div>
+            <nav class="sidebar-nav" id="sidebarList" aria-label="Groups by Domain">
+                <!-- Groups generate here -->
+            </nav>
+        </aside>
 
-            <main class="viewport">
-                <div class="view-controls" id="selectionControls">
-                    <div class="bulk-info">
-                        <span id="selectionCount">0 items selected</span>
+        <main class="viewport" id="main-content">
+            <div class="selection-bar" id="selectionBar">
+                <span id="selectionText" style="font-weight: 600;">0 items selected</span>
+                <div class="action-group">
+                    <button class="btn btn-outline" style="background: rgba(255,255,255,0.1); border:none;"
+                        onclick="bulkAction(false)">Restore selection</button>
+                    <button class="btn btn-primary" style="background: var(--danger); box-shadow: none;"
+                        onclick="bulkAction(true)">Delete selection</button>
+                    <button class="btn btn-outline" style="color: #fff; border:none;"
+                        onclick="clearSelection()">Cancel</button>
+                </div>
+            </div>
+
+            <div class="toolbar">
+                <div class="action-group">
+                    <h2 id="tabTitle" style="font-size: 1.5rem;">Everything</h2>
+                </div>
+                <div class="action-group">
+                    <div class="field-box" style="gap: 5px;">
+                        <span class="field-label">Delete strategy</span>
+                        <select id="dedupeMode" class="select-sm">
+                            <option value="domain_all">Domain + User + Pass</option>
+                            <option value="url_all">Full URL + User + Pass</option>
+                            <option value="name_all">Site Name + User + Pass</option>
+                            <option value="user_pass">User + Pass (Global)</option>
+                            <option value="user">Username Only</option>
+                            <option value="incomplete">Incomplete (Empty User/Pass)</option>
+                        </select>
                     </div>
-                    <div class="bulk-actions">
-                        <button class="btn btn-danger" id="bulkDeleteBtn" onclick="bulkAction(true)" disabled>Bulk
-                            Delete</button>
-                        <button class="btn btn-restore" id="bulkRestoreBtn" onclick="bulkAction(false)" disabled>Bulk
-                            Restore</button>
-                    </div>
+                    <button class="btn btn-outline" onclick="autoDedupe()" style="margin-top: 15px;">Run
+                        auto-delete</button>
                 </div>
+            </div>
 
-                <div class="table-card">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 50px;">
-                                    <div class="checkbox-container">
-                                        <input type="checkbox" id="selectAll" onclick="toggleSelectAll()">
-                                    </div>
-                                </th>
-                                <th style="width: 35%;">Site & URL</th>
-                                <th style="width: 25%;">Identity</th>
-                                <th style="width: 25%;">Secret</th>
-                                <th style="width: 10%; text-align: right;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="itemsTableBody">
-                        </tbody>
-                    </table>
-                </div>
-            </main>
-        </div>
+            <div class="table-wrap">
+                <table role="grid">
+                    <thead>
+                        <tr>
+                            <th class="checkbox-cell">
+                                <input type="checkbox" class="custom-checkbox" id="selectAll"
+                                    onclick="toggleSelectAll()">
+                            </th>
+                            <th scope="col">Site & Label</th>
+                            <th scope="col">Identity</th>
+                            <th scope="col">Secret</th>
+                            <th scope="col" class="action-cell">Manual Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </main>
     </div>
 
     <script>
@@ -428,13 +548,14 @@
         let originalFileName = "";
         let hasUnsavedChanges = false;
         let selectedIndices = new Set();
+        let showPasswords = new Set();
 
         const fileInput = document.getElementById('fileInput');
         const uploadOverlay = document.getElementById('uploadOverlay');
         const app = document.getElementById('app');
         const itemsTableBody = document.getElementById('itemsTableBody');
         const sidebarList = document.getElementById('sidebarList');
-        const selectAllCheckbox = document.getElementById('selectAll');
+        const selectionBar = document.getElementById('selectionBar');
 
         fileInput.addEventListener('change', handleFile);
 
@@ -454,7 +575,7 @@
             reader.onload = (event) => {
                 try {
                     bitwardenData = JSON.parse(event.target.result);
-                    if (!bitwardenData.items) throw new Error("Missing 'items' array");
+                    if (!bitwardenData.items) throw new Error("This doesn't look like a Bitwarden export.");
 
                     bitwardenData.items.forEach(item => item._isDeleted = false);
                     uploadOverlay.classList.add('hidden');
@@ -469,21 +590,19 @@
         }
 
         function getBaseUrl(item) {
-            if (item.type !== 1) return "Other Items";
+            if (item.type !== 1) return "System Info";
             const login = item.login || {};
-            if (!login.uris || login.uris.length === 0) return "No URL";
+            if (!login.uris || login.uris.length === 0) return "No Domain";
 
             try {
                 let raw = login.uris[0].uri || "";
                 if (!raw.includes('://')) raw = 'http://' + raw;
-                const url = new URL(raw);
-                return url.hostname.replace('www.', '');
-            } catch {
-                return "Invalid URL";
-            }
+                return new URL(raw).hostname.replace('www.', '');
+            } catch { return "Misc URL"; }
         }
 
         function renderSidebar() {
+            const filter = document.getElementById('sidebarSearch').value.toLowerCase();
             const groups = { 'all': 0 };
             bitwardenData.items.forEach(item => {
                 const url = getBaseUrl(item);
@@ -491,123 +610,145 @@
                 groups['all']++;
             });
 
-            const sortedKeys = Object.keys(groups).sort((a, b) => {
-                if (a === 'all') return -1;
-                if (b === 'all') return 1;
-                return groups[b] - groups[a];
-            });
+            const sortedKeys = Object.keys(groups)
+                .filter(k => k.toLowerCase().includes(filter))
+                .sort((a, b) => {
+                    if (a === 'all') return -1;
+                    if (b === 'all') return 1;
+                    return groups[b] - groups[a];
+                });
 
             sidebarList.innerHTML = sortedKeys.map(key => `
-                <div class="url-tab ${activeTab === key ? 'active' : ''}" onclick="setTab('${key}')">
-                    <span class="url-name">${key === 'all' ? 'Everything' : key}</span>
-                    <span class="url-count">${groups[key]}</span>
+                <div class="nav-item ${activeTab === key ? 'active' : ''}" onclick="setTab('${key}')">
+                    <span>${key === 'all' ? 'All Items' : key}</span>
+                    <span class="count">${groups[key]}</span>
                 </div>
             `).join('');
         }
 
         function setTab(key) {
             activeTab = key;
+            document.getElementById('tabTitle').textContent = key === 'all' ? 'Everything' : key;
             selectedIndices.clear();
-            selectAllCheckbox.checked = false;
-            updateSelectionUI();
             renderSidebar();
             renderTable();
         }
 
         function renderTable() {
-            itemsTableBody.innerHTML = '';
-
             const filtered = bitwardenData.items.map((item, index) => ({ item, index }))
-                .filter(entry => {
-                    if (activeTab === 'all') return true;
-                    return getBaseUrl(entry.item) === activeTab;
-                });
+                .filter(entry => activeTab === 'all' || getBaseUrl(entry.item) === activeTab);
 
-            filtered.forEach(({ item, index }) => {
-                const tr = document.createElement('tr');
-                if (item._isDeleted) tr.className = 'deleted-row';
-
+            const rowsHtml = filtered.map(({ item, index }) => {
                 const login = item.login || {};
                 const name = item.name || 'Unnamed';
                 const uri = (login.uris && login.uris.length > 0) ? login.uris[0].uri : "N/A";
+                const isRevealed = showPasswords.has(index);
+                const isSelected = selectedIndices.has(index);
+                const isDeleted = item._isDeleted;
 
-                tr.innerHTML = `
-                    <td>
-                        <div class="checkbox-container">
-                            <input type="checkbox" ${selectedIndices.has(index) ? 'checked' : ''} onclick="event.stopPropagation(); toggleSelect(${index})">
-                        </div>
-                    </td>
-                    <td>
-                        <span class="label-pill label-url">URL / Label</span><br>
-                        <strong>${name}</strong><br>
-                        <small style="color:var(--text-dim); word-break: break-all;">${uri}</small>
-                    </td>
-                    <td>
-                        <span class="label-pill label-user">Username</span><br>
-                        ${login.username || '<em style="color:var(--danger)">Empty</em>'}
-                    </td>
-                    <td>
-                        <span class="label-pill label-pass">Password</span><br>
-                        <span style="font-family: monospace; font-size: 1.1rem; color: #a78bfa;">
-                            ${login.password || '<em style="color:var(--danger)">Empty</em>'}
-                        </span>
-                    </td>
-                    <td style="text-align: right;">
-                        <button class="btn ${item._isDeleted ? 'btn-restore' : 'btn-danger'}" onclick="toggleItem(${index})">
-                            ${item._isDeleted ? 'Restore' : 'Delete'}
-                        </button>
-                    </td>
+                return `
+                    <tr id="row-${index}" class="${isDeleted ? 'deleted' : ''} ${isSelected ? 'selected' : ''}" onclick="toggleSelect(${index})">
+                        <td class="checkbox-cell">
+                            <input type="checkbox" class="custom-checkbox" 
+                                   ${isSelected ? 'checked' : ''} 
+                                   onclick="event.stopPropagation(); toggleSelect(${index})">
+                        </td>
+                        <td>
+                            <div class="field-box">
+                                <span class="field-value">${name}</span>
+                                <span class="field-sub">${uri}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="field-box">
+                                <span class="field-value" style="${!login.username ? 'color:var(--danger); font-style:italic;' : ''}">
+                                    ${login.username || 'Empty'}
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="field-box">
+                                <div class="password-container">
+                                    <span class="password-val">${isRevealed ? (login.password || 'none') : '••••••••'}</span>
+                                    <button class="btn btn-outline" style="padding:2px 6px; font-size:10px;" 
+                                            onclick="event.stopPropagation(); togglePassword(${index})">
+                                        ${isRevealed ? 'Hide' : 'Show'}
+                                    </button>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="action-cell">
+                            <button class="btn ${isDeleted ? 'btn-outline' : 'btn-danger'}" 
+                                    style="padding: 0.4rem 0.8rem; width: 100px; justify-content: center;"
+                                    onclick="event.stopPropagation(); toggleItem(${index})">
+                                ${isDeleted ? 'Restore' : 'Delete'}
+                            </button>
+                        </td>
+                    </tr>
                 `;
-                tr.onclick = () => toggleSelect(index);
-                itemsTableBody.appendChild(tr);
-            });
-            updateSelectionUI();
+            }).join('');
+
+            itemsTableBody.innerHTML = rowsHtml;
+            updateStats();
+            updateSelectionBar();
+        }
+
+        function togglePassword(idx) {
+            if (showPasswords.has(idx)) showPasswords.delete(idx);
+            else showPasswords.add(idx);
+
+            // Localized update for the specific row's password cell
+            const row = document.getElementById(`row-${idx}`);
+            if (row) {
+                const isRevealed = showPasswords.has(idx);
+                const login = bitwardenData.items[idx].login || {};
+                const container = row.querySelector('.password-container');
+                container.querySelector('.password-val').textContent = isRevealed ? (login.password || 'none') : '••••••••';
+                container.querySelector('button').textContent = isRevealed ? 'Hide' : 'Show';
+            }
         }
 
         function toggleSelect(idx) {
             if (selectedIndices.has(idx)) selectedIndices.delete(idx);
             else selectedIndices.add(idx);
 
-            updateSelectionUI();
+            // Localized update to avoid full re-render
+            const row = document.getElementById(`row-${idx}`);
+            if (row) {
+                const isSelected = selectedIndices.has(idx);
+                row.classList.toggle('selected', isSelected);
+                row.querySelector('input[type="checkbox"]').checked = isSelected;
+            }
+            updateSelectionBar();
+        }
 
-            // Re-render only checkboxes to keep it fast
-            const rows = itemsTableBody.querySelectorAll('tr');
-            rows.forEach(row => {
-                const cb = row.querySelector('input[type="checkbox"]');
-                const rowIdx = parseInt(row.querySelector('button').getAttribute('onclick').match(/\d+/)[0]);
-                cb.checked = selectedIndices.has(rowIdx);
-            });
+        function clearSelection() {
+            selectedIndices.clear();
+            document.getElementById('selectAll').checked = false;
+            // Re-render to update all checkboxes and row styles
+            renderTable();
         }
 
         function toggleSelectAll() {
-            const visibleIndices = bitwardenData.items.map((item, index) => ({ item, index }))
-                .filter(entry => activeTab === 'all' || getBaseUrl(entry.item) === activeTab)
-                .map(entry => entry.index);
+            const visible = bitwardenData.items.map((item, index) => ({ item, index }))
+                .filter(entry => activeTab === 'all' || getBaseUrl(entry.item) === activeTab);
 
-            if (selectAllCheckbox.checked) {
-                visibleIndices.forEach(idx => selectedIndices.add(idx));
-            } else {
-                visibleIndices.forEach(idx => selectedIndices.delete(idx));
-            }
+            if (selectedIndices.size === visible.length) selectedIndices.clear();
+            else visible.forEach(v => selectedIndices.add(v.index));
             renderTable();
         }
 
-        function updateSelectionUI() {
+        function updateSelectionBar() {
             const count = selectedIndices.size;
-            document.getElementById('selectionCount').textContent = `${count} items selected`;
-            document.getElementById('bulkDeleteBtn').disabled = (count === 0);
-            document.getElementById('bulkRestoreBtn').disabled = (count === 0);
+            selectionBar.classList.toggle('visible', count > 0);
+            document.getElementById('selectionText').textContent = `${count} items selected`;
         }
 
-        function bulkAction(shouldDelete) {
-            selectedIndices.forEach(idx => {
-                bitwardenData.items[idx]._isDeleted = shouldDelete;
-            });
-            hasUnsavedChanges = true;
-            selectedIndices.clear();
-            selectAllCheckbox.checked = false;
-            renderSidebar();
-            renderTable();
+        function updateStats() {
+            const items = bitwardenData.items;
+            const removed = items.filter(i => i._isDeleted).length;
+            document.getElementById('totalCount').textContent = items.length;
+            document.getElementById('removedCount').textContent = removed;
         }
 
         function toggleItem(idx) {
@@ -617,20 +758,10 @@
             renderSidebar();
         }
 
-        function getDedupeKey(item, mode) {
-            if (item.type !== 1) return null;
-            const login = item.login || {};
-            const user = (login.username || "").trim().toLowerCase();
-            const pass = (login.password || "").trim();
-            const url = getBaseUrl(item);
-
-            switch (mode) {
-                case 'user': return user;
-                case 'pass': return pass;
-                case 'user_pass': return `${user}|${pass}`;
-                case 'all': return `${url}|${user}|${pass}`;
-                default: return null;
-            }
+        function bulkAction(shouldScrub) {
+            selectedIndices.forEach(idx => { bitwardenData.items[idx]._isDeleted = shouldScrub; });
+            hasUnsavedChanges = true;
+            clearSelection();
         }
 
         function autoDedupe() {
@@ -642,40 +773,40 @@
                 if (item._isDeleted || item.type !== 1) return;
 
                 if (mode === 'incomplete') {
-                    const login = item.login || {};
-                    if (!login.username || !login.password) {
-                        item._isDeleted = true;
-                        count++;
-                    }
+                    if (!item.login?.username || !item.login?.password) { item._isDeleted = true; count++; }
                     return;
                 }
 
-                const key = getDedupeKey(item, mode);
-                if (!key) return;
+                const login = item.login || {};
+                const user = (login.username || "").trim().toLowerCase();
+                const pass = (login.password || "").trim();
+                const name = (item.name || "").trim().toLowerCase();
+                const fullUri = (login.uris && login.uris.length > 0) ? (login.uris[0].uri || "").trim().toLowerCase() : "none";
+                const domain = getBaseUrl(item).toLowerCase();
 
-                if (seen.has(key)) {
-                    item._isDeleted = true;
-                    count++;
-                } else {
-                    seen.add(key);
-                }
+                let key;
+                if (mode === 'user') key = user;
+                else if (mode === 'user_pass') key = `${user}|${pass}`;
+                else if (mode === 'name_all') key = `${name}|${user}|${pass}`;
+                else if (mode === 'url_all') key = `${fullUri}|${user}|${pass}`;
+                else key = `${domain}|${user}|${pass}`; // domain_all (default)
+
+                if (seen.has(key)) { item._isDeleted = true; count++; }
+                else seen.add(key);
             });
 
             hasUnsavedChanges = true;
             renderTable();
             renderSidebar();
-            alert(`Marked ${count} items as deleted based on strategy.`);
+            alert(`Auto-delete complete. Marked ${count} potential duplicates for removal.`);
         }
 
         function downloadJSON() {
-            const clean = bitwardenData.items
-                .filter(i => !i._isDeleted)
-                .map(({ _isDeleted, ...rest }) => rest);
-
-            const blob = new Blob([JSON.stringify({ ...bitwardenData, items: clean }, null, 2)], { type: 'application/json' });
+            const final = bitwardenData.items.filter(i => !i._isDeleted).map(({ _isDeleted, ...rest }) => rest);
+            const blob = new Blob([JSON.stringify({ ...bitwardenData, items: final }, null, 2)], { type: 'application/json' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = originalFileName.replace('.json', '') + '_clean.json';
+            a.download = originalFileName.replace('.json', '') + '_deduped.json';
             a.click();
             hasUnsavedChanges = false;
         }
