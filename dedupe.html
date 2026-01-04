@@ -205,12 +205,25 @@
             justify-content: space-between;
             padding: 0 2rem;
             transform: translateY(-100%);
-            transition: var(--transition);
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 90;
         }
 
         .selection-bar.visible {
             transform: translateY(0);
+        }
+
+        .content-shifter {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
+        }
+
+        .content-shifter.shifted {
+            transform: translateY(60px);
         }
 
         /* Table Container */
@@ -500,44 +513,51 @@
                 </div>
             </div>
 
-            <div class="toolbar">
-                <div class="action-group">
-                    <h2 id="tabTitle" style="font-size: 1.5rem;">Everything</h2>
-                </div>
-                <div class="action-group">
-                    <div class="field-box" style="gap: 5px;">
-                        <span class="field-label">Delete strategy</span>
-                        <select id="dedupeMode" class="select-sm">
-                            <option value="domain_all">Domain + User + Pass</option>
-                            <option value="url_all">Full URL + User + Pass</option>
-                            <option value="name_all">Site Name + User + Pass</option>
-                            <option value="user_pass">User + Pass (Global)</option>
-                            <option value="user">Username Only</option>
-                            <option value="incomplete">Incomplete (Empty User/Pass)</option>
-                        </select>
+            <div class="content-shifter" id="contentShifter">
+                <div class="toolbar">
+                    <div class="action-group">
+                        <h2 id="tabTitle" style="font-size: 1.5rem;">Everything</h2>
                     </div>
-                    <button class="btn btn-outline" onclick="autoDedupe()" style="margin-top: 15px;">Run
-                        auto-delete</button>
+                    <div class="action-group">
+                        <div class="field-box" style="gap: 5px;">
+                            <span class="field-label">Delete strategy</span>
+                            <select id="dedupeMode" class="select-sm">
+                                <option value="domain_all">Domain + User + Pass</option>
+                                <option value="url_all">Full URL + User + Pass</option>
+                                <option value="name_all">Site Name + User + Pass</option>
+                                <option value="user_pass">User + Pass (Global)</option>
+                                <option value="user">Username Only</option>
+                                <option value="incomplete">Incomplete (Empty User/Pass)</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-outline" onclick="toggleBulkReveal()" style="margin-top: 15px;"
+                            id="bulkRevealBtn">
+                            Reveal all passwords
+                        </button>
+                        <button class="btn btn-outline" onclick="autoDedupe()" style="margin-top: 15px;">
+                            Run auto-delete
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            <div class="table-wrap">
-                <table role="grid">
-                    <thead>
-                        <tr>
-                            <th class="checkbox-cell">
-                                <input type="checkbox" class="custom-checkbox" id="selectAll"
-                                    onclick="toggleSelectAll()">
-                            </th>
-                            <th scope="col">Site & Label</th>
-                            <th scope="col">Identity</th>
-                            <th scope="col">Secret</th>
-                            <th scope="col" class="action-cell">Manual Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="itemsTableBody">
-                    </tbody>
-                </table>
+                <div class="table-wrap">
+                    <table role="grid">
+                        <thead>
+                            <tr>
+                                <th class="checkbox-cell">
+                                    <input type="checkbox" class="custom-checkbox" id="selectAll"
+                                        onclick="toggleSelectAll()">
+                                </th>
+                                <th scope="col">Site & Label</th>
+                                <th scope="col">Identity</th>
+                                <th scope="col">Secret</th>
+                                <th scope="col" class="action-cell">Manual Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsTableBody">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </main>
     </div>
@@ -549,6 +569,7 @@
         let hasUnsavedChanges = false;
         let selectedIndices = new Set();
         let showPasswords = new Set();
+        let showAllPasswords = false;
 
         const fileInput = document.getElementById('fileInput');
         const uploadOverlay = document.getElementById('uploadOverlay');
@@ -642,7 +663,7 @@
                 const login = item.login || {};
                 const name = item.name || 'Unnamed';
                 const uri = (login.uris && login.uris.length > 0) ? login.uris[0].uri : "N/A";
-                const isRevealed = showPasswords.has(index);
+                const isRevealed = showAllPasswords || showPasswords.has(index);
                 const isSelected = selectedIndices.has(index);
                 const isDeleted = item._isDeleted;
 
@@ -700,12 +721,19 @@
             // Localized update for the specific row's password cell
             const row = document.getElementById(`row-${idx}`);
             if (row) {
-                const isRevealed = showPasswords.has(idx);
+                const isRevealed = showAllPasswords || showPasswords.has(idx);
                 const login = bitwardenData.items[idx].login || {};
                 const container = row.querySelector('.password-container');
                 container.querySelector('.password-val').textContent = isRevealed ? (login.password || 'none') : '••••••••';
                 container.querySelector('button').textContent = isRevealed ? 'Hide' : 'Show';
             }
+        }
+
+        function toggleBulkReveal() {
+            showAllPasswords = !showAllPasswords;
+            const btn = document.getElementById('bulkRevealBtn');
+            btn.textContent = showAllPasswords ? 'Hide all passwords' : 'Reveal all passwords';
+            renderTable();
         }
 
         function toggleSelect(idx) {
@@ -740,7 +768,9 @@
 
         function updateSelectionBar() {
             const count = selectedIndices.size;
-            selectionBar.classList.toggle('visible', count > 0);
+            const visible = count > 0;
+            selectionBar.classList.toggle('visible', visible);
+            document.getElementById('contentShifter').classList.toggle('shifted', visible);
             document.getElementById('selectionText').textContent = `${count} items selected`;
         }
 
