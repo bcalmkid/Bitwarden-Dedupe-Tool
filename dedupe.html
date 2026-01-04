@@ -42,7 +42,6 @@
             color: var(--text);
             min-height: 100vh;
             overflow: hidden;
-            /* We'll scroll inside segments */
         }
 
         h1,
@@ -51,7 +50,6 @@
             font-family: 'Outfit', sans-serif;
         }
 
-        /* Layout */
         .app-container {
             display: grid;
             grid-template-rows: auto 1fr;
@@ -63,7 +61,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1.5rem 2rem;
+            padding: 1rem 2rem;
             background: rgba(15, 23, 42, 0.8);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border);
@@ -71,7 +69,7 @@
         }
 
         .logo-area h1 {
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             font-weight: 700;
             background: linear-gradient(to right, #60a5fa, #a78bfa);
             -webkit-background-clip: text;
@@ -84,7 +82,6 @@
             height: 100%;
         }
 
-        /* Sidebar Tabs */
         .sidebar {
             width: var(--sidebar-w);
             background: rgba(0, 0, 0, 0.2);
@@ -145,12 +142,33 @@
             font-weight: 700;
         }
 
-        /* Table Area */
         .viewport {
             flex: 1;
             padding: 2rem;
-            overflow-y: auto;
             background: rgba(15, 23, 42, 0.4);
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            /* Important for flex child scrolling */
+        }
+
+        .view-controls {
+            flex-shrink: 0;
+            /* Don't squash buttons */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            background: var(--surface);
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .bulk-actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
         }
 
         .controls {
@@ -207,12 +225,20 @@
             border: 1px solid rgba(16, 185, 129, 0.2);
         }
 
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .table-card {
             background: var(--surface);
             border-radius: 16px;
             border: 1px solid var(--border);
-            overflow: hidden;
-            margin-top: 1rem;
+            overflow-y: auto;
+            /* Enable scrolling here */
+            flex: 1;
+            min-height: 0;
+            /* Force container to respect parent height */
         }
 
         table {
@@ -221,16 +247,20 @@
         }
 
         th {
-            background: rgba(0, 0, 0, 0.2);
+            background: var(--surface);
             padding: 1rem;
             text-align: left;
             font-size: 0.7rem;
             color: var(--text-dim);
             text-transform: uppercase;
+            z-index: 20;
+            position: sticky;
+            top: 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
         }
 
         td {
-            padding: 1.25rem 1rem;
+            padding: 1rem;
             border-bottom: 1px solid var(--border);
             vertical-align: middle;
         }
@@ -268,6 +298,19 @@
         .label-url {
             background: rgba(148, 163, 184, 0.1);
             color: var(--text-dim);
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary);
         }
 
         .upload-overlay {
@@ -340,22 +383,32 @@
                     <h3 style="font-size: 0.9rem; color: var(--text-dim); text-transform: uppercase;">Groups by URL</h3>
                 </div>
                 <div class="sidebar-list" id="sidebarList">
-                    <!-- Tabs generate here -->
                 </div>
             </aside>
 
             <main class="viewport">
-                <div id="currentTabHeader" style="margin-bottom: 1.5rem;">
-                    <h2 id="tabTitle">All Logins</h2>
-                    <p id="tabSubtitle" style="color: var(--text-dim); font-size: 0.9rem;">Reviewing all items in your
-                        vault</p>
+                <div class="view-controls" id="selectionControls">
+                    <div class="bulk-info">
+                        <span id="selectionCount">0 items selected</span>
+                    </div>
+                    <div class="bulk-actions">
+                        <button class="btn btn-danger" id="bulkDeleteBtn" onclick="bulkAction(true)" disabled>Bulk
+                            Delete</button>
+                        <button class="btn btn-restore" id="bulkRestoreBtn" onclick="bulkAction(false)" disabled>Bulk
+                            Restore</button>
+                    </div>
                 </div>
 
                 <div class="table-card">
                     <table>
                         <thead>
                             <tr>
-                                <th style="width: 40%;">Site & URL</th>
+                                <th style="width: 50px;">
+                                    <div class="checkbox-container">
+                                        <input type="checkbox" id="selectAll" onclick="toggleSelectAll()">
+                                    </div>
+                                </th>
+                                <th style="width: 35%;">Site & URL</th>
                                 <th style="width: 25%;">Identity</th>
                                 <th style="width: 25%;">Secret</th>
                                 <th style="width: 10%; text-align: right;">Action</th>
@@ -374,12 +427,14 @@
         let activeTab = 'all';
         let originalFileName = "";
         let hasUnsavedChanges = false;
+        let selectedIndices = new Set();
 
         const fileInput = document.getElementById('fileInput');
         const uploadOverlay = document.getElementById('uploadOverlay');
         const app = document.getElementById('app');
         const itemsTableBody = document.getElementById('itemsTableBody');
         const sidebarList = document.getElementById('sidebarList');
+        const selectAllCheckbox = document.getElementById('selectAll');
 
         fileInput.addEventListener('change', handleFile);
 
@@ -452,7 +507,9 @@
 
         function setTab(key) {
             activeTab = key;
-            document.getElementById('tabTitle').textContent = key === 'all' ? 'All Logins' : key;
+            selectedIndices.clear();
+            selectAllCheckbox.checked = false;
+            updateSelectionUI();
             renderSidebar();
             renderTable();
         }
@@ -460,23 +517,29 @@
         function renderTable() {
             itemsTableBody.innerHTML = '';
 
-            const filtered = bitwardenData.items.filter(item => {
-                if (activeTab === 'all') return true;
-                return getBaseUrl(item) === activeTab;
-            });
+            const filtered = bitwardenData.items.map((item, index) => ({ item, index }))
+                .filter(entry => {
+                    if (activeTab === 'all') return true;
+                    return getBaseUrl(entry.item) === activeTab;
+                });
 
-            filtered.forEach((item, index) => {
-                const globalIndex = bitwardenData.items.indexOf(item);
+            filtered.forEach(({ item, index }) => {
                 const tr = document.createElement('tr');
                 if (item._isDeleted) tr.className = 'deleted-row';
 
                 const login = item.login || {};
+                const name = item.name || 'Unnamed';
                 const uri = (login.uris && login.uris.length > 0) ? login.uris[0].uri : "N/A";
 
                 tr.innerHTML = `
                     <td>
+                        <div class="checkbox-container">
+                            <input type="checkbox" ${selectedIndices.has(index) ? 'checked' : ''} onclick="event.stopPropagation(); toggleSelect(${index})">
+                        </div>
+                    </td>
+                    <td>
                         <span class="label-pill label-url">URL / Label</span><br>
-                        <strong>${item.name || 'Unnamed'}</strong><br>
+                        <strong>${name}</strong><br>
                         <small style="color:var(--text-dim); word-break: break-all;">${uri}</small>
                     </td>
                     <td>
@@ -490,13 +553,61 @@
                         </span>
                     </td>
                     <td style="text-align: right;">
-                        <button class="btn ${item._isDeleted ? 'btn-restore' : 'btn-danger'}" onclick="toggleItem(${globalIndex})">
+                        <button class="btn ${item._isDeleted ? 'btn-restore' : 'btn-danger'}" onclick="toggleItem(${index})">
                             ${item._isDeleted ? 'Restore' : 'Delete'}
                         </button>
                     </td>
                 `;
+                tr.onclick = () => toggleSelect(index);
                 itemsTableBody.appendChild(tr);
             });
+            updateSelectionUI();
+        }
+
+        function toggleSelect(idx) {
+            if (selectedIndices.has(idx)) selectedIndices.delete(idx);
+            else selectedIndices.add(idx);
+
+            updateSelectionUI();
+
+            // Re-render only checkboxes to keep it fast
+            const rows = itemsTableBody.querySelectorAll('tr');
+            rows.forEach(row => {
+                const cb = row.querySelector('input[type="checkbox"]');
+                const rowIdx = parseInt(row.querySelector('button').getAttribute('onclick').match(/\d+/)[0]);
+                cb.checked = selectedIndices.has(rowIdx);
+            });
+        }
+
+        function toggleSelectAll() {
+            const visibleIndices = bitwardenData.items.map((item, index) => ({ item, index }))
+                .filter(entry => activeTab === 'all' || getBaseUrl(entry.item) === activeTab)
+                .map(entry => entry.index);
+
+            if (selectAllCheckbox.checked) {
+                visibleIndices.forEach(idx => selectedIndices.add(idx));
+            } else {
+                visibleIndices.forEach(idx => selectedIndices.delete(idx));
+            }
+            renderTable();
+        }
+
+        function updateSelectionUI() {
+            const count = selectedIndices.size;
+            document.getElementById('selectionCount').textContent = `${count} items selected`;
+            document.getElementById('bulkDeleteBtn').disabled = (count === 0);
+            document.getElementById('bulkRestoreBtn').disabled = (count === 0);
+        }
+
+        function bulkAction(shouldDelete) {
+            selectedIndices.forEach(idx => {
+                bitwardenData.items[idx]._isDeleted = shouldDelete;
+            });
+            hasUnsavedChanges = true;
+            selectedIndices.clear();
+            selectAllCheckbox.checked = false;
+            renderSidebar();
+            renderTable();
         }
 
         function toggleItem(idx) {
@@ -518,7 +629,6 @@
                 case 'pass': return pass;
                 case 'user_pass': return `${user}|${pass}`;
                 case 'all': return `${url}|${user}|${pass}`;
-                case 'incomplete': return (user === "" || pass === "") ? Math.random() : null; // Random key to just trigger "deleted" if condition met
                 default: return null;
             }
         }
