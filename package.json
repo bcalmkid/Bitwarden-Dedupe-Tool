@@ -1,0 +1,24 @@
+{
+  "name": "bitwarden",
+  "version": "1.0.0",
+  "description": "A high-performance, secure, and modern web-based tool for cleaning up duplicate entries in your Bitwarden vault. This tool runs entirely in your browser—your sensitive data never leaves your computer. Specifically rebranded to match the official **Bitwarden Web Vault** aesthetic.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bcalmkid/Bitwarden.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/bcalmkid/Bitwarden/issues"
+  },
+  "homepage": "https://github.com/bcalmkid/Bitwarden#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.57.0"
+  }
+}

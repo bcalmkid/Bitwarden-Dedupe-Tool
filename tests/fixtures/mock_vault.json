@@ -1,0 +1,109 @@
+{
+    "encrypted": false,
+    "items": [
+        {
+            "id": "1",
+            "type": 1,
+            "name": "GitHub (Exact Duplicate 1)",
+            "login": {
+                "uris": [
+                    {
+                        "uri": "https://github.com/login"
+                    }
+                ],
+                "username": "coder123",
+                "password": "password123"
+            }
+        },
+        {
+            "id": "2",
+            "type": 1,
+            "name": "GitHub (Exact Duplicate 2)",
+            "login": {
+                "uris": [
+                    {
+                        "uri": "https://github.com/login"
+                    }
+                ],
+                "username": "coder123",
+                "password": "password123"
+            }
+        },
+        {
+            "id": "3",
+            "type": 1,
+            "name": "Different Site Name",
+            "login": {
+                "uris": [
+                    {
+                        "uri": "https://github.com/login"
+                    }
+                ],
+                "username": "coder123",
+                "password": "password123"
+            }
+        },
+        {
+            "id": "4",
+            "type": 1,
+            "name": "Incomplete User",
+            "login": {
+                "uris": [
+                    {
+                        "uri": "https://example.com"
+                    }
+                ],
+                "username": "",
+                "password": "password123"
+            }
+        },
+        {
+            "id": "5",
+            "type": 1,
+            "name": "Incomplete Pass",
+            "login": {
+                "uris": [
+                    {
+                        "uri": "https://example.com"
+                    }
+                ],
+                "username": "user1",
+                "password": ""
+            }
+        },
+        {
+            "id": "6",
+            "type": 1,
+            "name": "Totally Empty",
+            "login": {
+                "uris": [
+                    {
+                        "uri": "https://example.com"
+                    }
+                ],
+                "username": "",
+                "password": ""
+            }
+        },
+        {
+            "id": "7",
+            "type": 2,
+            "name": "Secure Note (Should Ignore)",
+            "notes": "This is a note"
+        },
+        {
+            "id": "8",
+            "type": 1,
+            "name": "Whitespace User",
+            "login": {
+                "uris": [
+                    {
+                        "uri": "https://test.com"
+                    }
+                ],
+                "username": "   ",
+                "password": "pass"
+            }
+        }
+    ]
+}
