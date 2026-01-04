@@ -12,22 +12,51 @@
         rel="stylesheet">
     <style>
         :root {
-            --primary: #3b82f6;
-            --primary-light: #60a5fa;
-            --bg: #0a0f1d;
-            --surface: #161d31;
-            --surface-hover: #1e273e;
-            --header-bg: #1e273e;
-            --sidebar-bg: #111827;
-            --border: #283046;
-            --text: #d0d2d6;
-            --text-heading: #f8fafc;
-            --text-muted: #b4b7bd;
-            --danger: #ea5455;
+            --primary: #175ddc;
+            --primary-hover: #1552c6;
+            --primary-light: #528bff;
+            --bg: #171b21;
+            --surface: #171b21;
+            --surface-alt: #1f242c;
+            --surface-hover: #242933;
+            --header-bg: #171b21;
+            --sidebar-bg: #101419;
+            --sidebar-active: #1c222b;
+            --border: #2e333d;
+            --text: #ffffff;
+            --text-heading: #ffffff;
+            --text-muted: #9aa0a6;
+            --danger: #e24e4d;
+            --danger-hover: #c93b3b;
             --success: #28c76f;
-            --accent: #7367f0;
-            --sidebar-w: 280px;
-            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            --accent: #175ddc;
+            --sidebar-w: 260px;
+            --transition: all 0.2s ease-in-out;
+        }
+
+        body.light-mode {
+            --bg: #ffffff;
+            --surface: #ffffff;
+            --surface-alt: #f8f9fa;
+            --surface-hover: #f3f4f6;
+            --header-bg: #ffffff;
+            --sidebar-bg: #f8f9fa;
+            --sidebar-active: #e9ecef;
+            --border: #dee2e6;
+            --text: #333333;
+            --text-heading: #171b21;
+            --text-muted: #6c757d;
+            --primary: #175ddc;
+            --primary-hover: #1552c6;
+            --danger: #dc3545;
+        }
+
+        body.light-mode .upload-overlay {
+            background-color: #f8fafc;
+        }
+
+        body.light-mode .nav-item:hover {
+            background: var(--surface-hover);
         }
 
         * {
@@ -88,7 +117,9 @@
         }
 
         .brand-text {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-heading);
             letter-spacing: -0.5px;
         }
 
@@ -138,32 +169,33 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
+            padding: 0.6rem 0.75rem;
             cursor: pointer;
-            margin-bottom: 0.25rem;
-            transition: var(--transition);
-            font-size: 0.9rem;
+            border-radius: 6px;
             color: var(--text-muted);
+            font-size: 0.9rem;
+            transition: var(--transition);
+            margin-bottom: 2px;
         }
 
         .nav-item:hover {
-            background: var(--surface);
-            color: var(--text-heading);
+            background: var(--surface-hover);
+            color: var(--text);
         }
 
         .nav-item.active {
-            background: var(--primary);
-            color: #fff;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            background: rgba(23, 93, 220, 0.1);
+            /* Low opacity blue tint */
+            color: var(--primary-light);
+            font-weight: 600;
         }
 
         .nav-item .count {
             font-size: 0.75rem;
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.05);
             padding: 2px 8px;
             border-radius: 12px;
-            font-weight: 600;
+            font-weight: 400;
         }
 
         /* Main Content Viewport */
@@ -265,20 +297,21 @@
         }
 
         th:nth-child(2) {
-            width: 40%;
+            width: 45%;
         }
 
+        /* Name column */
         th:nth-child(3) {
-            width: 22%;
+            width: 30%;
         }
 
+        /* Password column */
         th:nth-child(4) {
-            width: 22%;
+            width: 140px;
+            text-align: right;
         }
 
-        th:nth-child(5) {
-            width: 140px;
-        }
+        /* Action column */
 
         tbody tr {
             border-bottom: 1px solid var(--border);
@@ -400,9 +433,10 @@
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.6rem 1.25rem;
-            border-radius: 8px;
-            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            /* Squared look */
+            font-weight: 500;
             font-size: 0.85rem;
             cursor: pointer;
             border: none;
@@ -538,7 +572,14 @@
             justify-content: center;
             align-items: center;
             color: #fff;
+            opacity: 0;
+            pointer-events: none;
             transition: opacity 0.3s ease;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
         }
 
         .loader-card {
@@ -594,6 +635,11 @@
                     <span>Total: <strong id="totalCount" style="color: var(--text-heading)">0</strong></span>
                     <span>Removed: <strong id="removedCount" style="color: var(--danger)">0</strong></span>
                 </div>
+                <button class="btn btn-outline" onclick="toggleTheme()" id="themeToggle"
+                    aria-label="Toggle between dark and light mode" title="Toggle between dark and light mode">
+                    <span id="themeToggleIcon">🌙</span>
+                    <span id="themeToggleText">Dark Mode</span>
+                </button>
                 <button class="btn btn-primary" onclick="downloadJSON()">Export cleaned</button>
             </div>
         </nav>
@@ -660,10 +706,9 @@
                                     <input type="checkbox" class="custom-checkbox" id="selectAll"
                                         onclick="toggleSelectAll()">
                                 </th>
-                                <th scope="col">Site & Label</th>
-                                <th scope="col">Identity</th>
-                                <th scope="col">Secret</th>
-                                <th scope="col" class="action-cell">Manual Action</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Password</th>
+                                <th scope="col" style="text-align: right;">Action</th>
                             </tr>
                         </thead>
                         <tbody id="itemsTableBody">
@@ -673,7 +718,7 @@
             </div>
         </main>
     </div>
-    <div id="loader" class="loading-overlay hidden">
+    <div id="loader" class="loading-overlay">
         <div class="loader-card">
             <div class="spinner"></div>
             <p style="font-weight: 600; letter-spacing: 0.5px;">Processing Data...</p>
@@ -688,6 +733,30 @@
         let selectedIndices = new Set();
         let showPasswords = new Set();
         let showAllPasswords = false;
+
+        // Theme Handling
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-mode');
+                document.getElementById('themeToggleIcon').textContent = '☀️';
+                document.getElementById('themeToggleText').textContent = 'Light Mode';
+            }
+        }
+
+        function toggleTheme() {
+            const isLight = document.body.classList.toggle('light-mode');
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+
+            const icon = document.getElementById('themeToggleIcon');
+            const term = document.getElementById('themeToggleText');
+
+            icon.textContent = isLight ? '☀️' : '🌙';
+            term.textContent = isLight ? 'Light Mode' : 'Dark Mode';
+        }
+
+        // Initialize theme immediately
+        initTheme();
 
         const fileInput = document.getElementById('fileInput');
         const uploadOverlay = document.getElementById('uploadOverlay');
@@ -719,7 +788,10 @@
                             bitwardenData = JSON.parse(event.target.result);
                             if (!bitwardenData.items) throw new Error("This doesn't look like a Bitwarden export.");
 
+                            // Keep only Login items (type 1) and ignore cards, identities, etc.
+                            bitwardenData.items = bitwardenData.items.filter(item => item.type === 1);
                             bitwardenData.items.forEach(item => item._isDeleted = false);
+
                             uploadOverlay.classList.add('hidden');
                             app.classList.remove('hidden');
                             renderSidebar();
@@ -800,22 +872,14 @@
                                    onclick="event.stopPropagation(); toggleSelect(${index})">
                         </td>
                         <td>
-                            <div class="field-box">
-                                <div class="truncator field-value" onmouseenter="checkTruncation(this)">
+                            <div class="field-box" style="gap: 2px;">
+                                <div class="truncator field-value" onmouseenter="checkTruncation(this)" style="font-weight: 600; color: var(--text-heading); font-size: 0.95rem;">
                                     <span class="truncator-text">${name}</span>
                                     <span class="truncator-popover">${name}</span>
                                 </div>
-                                <div class="truncator field-sub" onmouseenter="checkTruncation(this)">
-                                    <span class="truncator-text">${uri}</span>
-                                    <span class="truncator-popover">${uri}</span>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="field-box">
-                                <div class="truncator field-value" onmouseenter="checkTruncation(this)" style="${!login.username ? 'color:var(--danger); font-style:italic;' : ''}">
-                                    <span class="truncator-text">${login.username || 'Empty'}</span>
-                                    <span class="truncator-popover">${login.username || 'Empty'}</span>
+                                <div class="truncator field-sub" onmouseenter="checkTruncation(this)" style="font-size: 0.85rem;">
+                                    <span class="truncator-text">${login.username || 'No username'}</span>
+                                    <span class="truncator-popover">${login.username || 'No username'}</span>
                                 </div>
                             </div>
                         </td>
@@ -987,34 +1051,52 @@
             let count = 0;
 
             bitwardenData.items.forEach(item => {
-                if (item._isDeleted || item.type !== 1) return;
+                if (item._isDeleted) return;
 
+                const login = item.login || {};
+                const user = (login.username || "").trim();
+                const pass = (login.password || "").trim();
+                const isUserEmpty = user === "";
+                const isPassEmpty = pass === "";
+
+                // Scrubbing modes: Target items with missing data
                 if (mode === 'incomplete') {
-                    if (!item.login?.username || !item.login?.password) { item._isDeleted = true; count++; }
+                    if (isUserEmpty || isPassEmpty) {
+                        item._isDeleted = true;
+                        count++;
+                    }
                     return;
                 }
 
                 if (mode === 'incomplete_both') {
-                    if (!item.login?.username && !item.login?.password) { item._isDeleted = true; count++; }
+                    if (isUserEmpty && isPassEmpty) {
+                        item._isDeleted = true;
+                        count++;
+                    }
                     return;
                 }
 
-                const login = item.login || {};
-                const user = (login.username || "").trim().toLowerCase();
-                const pass = (login.password || "").trim();
+                // Deduplication modes: Only for Login items (Type 1)
+                if (item.type !== 1) return;
+
                 const name = (item.name || "").trim().toLowerCase();
                 const fullUri = (login.uris && login.uris.length > 0) ? (login.uris[0].uri || "").trim().toLowerCase() : "none";
                 const domain = getBaseUrl(item).toLowerCase();
+                const userLower = user.toLowerCase();
 
                 let key;
-                if (mode === 'user') key = user;
-                else if (mode === 'user_pass') key = `${user}|${pass}`;
-                else if (mode === 'name_all') key = `${name}|${user}|${pass}`;
-                else if (mode === 'url_all') key = `${fullUri}|${user}|${pass}`;
-                else key = `${domain}|${user}|${pass}`; // domain_all (default)
+                if (mode === 'user') key = userLower;
+                else if (mode === 'user_pass') key = `${userLower}|${pass}`;
+                else if (mode === 'name_all') key = `${name}|${userLower}|${pass}`;
+                else if (mode === 'url_all') key = `${fullUri}|${userLower}|${pass}`;
+                else key = `${domain}|${userLower}|${pass}`; // domain_all (default)
 
-                if (seen.has(key)) { item._isDeleted = true; count++; }
-                else seen.add(key);
+                if (seen.has(key)) {
+                    item._isDeleted = true;
+                    count++;
+                } else {
+                    seen.add(key);
+                }
             });
 
             hasUnsavedChanges = true;
@@ -1027,18 +1109,11 @@
             const loader = document.getElementById('loader');
             const startTime = Date.now();
 
-            // OS-level cursor feedback is often more reliable
-            document.body.style.cursor = 'wait';
-
-            loader.classList.remove('hidden');
-            loader.style.opacity = '0';
+            loader.classList.add('active');
 
             // Ensure the browser has a chance to paint the loader
             await new Promise(r => requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    loader.style.opacity = '1';
-                    r();
-                });
+                requestAnimationFrame(() => r());
             }));
 
             try {
@@ -1050,10 +1125,7 @@
                 // Ensure loader stays for at least 500ms to prevent flickering
                 await new Promise(r => setTimeout(r, remaining));
 
-                loader.style.opacity = '0';
-                document.body.style.cursor = 'default';
-                // Wait for fade out before hiding
-                setTimeout(() => loader.classList.add('hidden'), 300);
+                loader.classList.remove('active');
             }
         }
 
