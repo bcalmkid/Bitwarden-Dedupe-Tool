@@ -198,8 +198,8 @@
             left: 0;
             right: 0;
             height: 60px;
-            background: var(--primary);
-            color: #fff;
+            background: var(--surface);
+            color: var(--text-heading);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -207,6 +207,8 @@
             transform: translateY(-100%);
             transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 90;
+            border-bottom: 2px solid var(--primary);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
 
         .selection-bar.visible {
@@ -367,7 +369,7 @@
             font-size: inherit;
         }
 
-        .truncator:hover .truncator-popover {
+        .truncator.can-truncate:hover .truncator-popover {
             opacity: 1;
             pointer-events: auto;
         }
@@ -523,6 +525,48 @@
         .skip-link:focus {
             top: 0;
         }
+
+        /* Loading States */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 15, 29, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            transition: opacity 0.3s ease;
+        }
+
+        .loader-card {
+            background: var(--surface);
+            padding: 2rem 3.5rem;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
 
@@ -568,14 +612,15 @@
             <div class="selection-bar" id="selectionBar">
                 <span id="selectionText" style="font-weight: 600;">0 items selected</span>
                 <div class="action-group">
-                    <button id="selectionRestoreBtn" class="btn btn-outline"
-                        style="background: rgba(255,255,255,0.1); border:none;" onclick="bulkAction(false)">Restore
-                        selection</button>
-                    <button id="selectionDeleteBtn" class="btn btn-primary"
-                        style="background: var(--danger); box-shadow: none;" onclick="bulkAction(true)">Delete
-                        selection</button>
-                    <button class="btn btn-outline" style="color: #fff; border:none;"
-                        onclick="clearSelection()">Cancel</button>
+                    <button id="selectionRestoreBtn" class="btn btn-primary" onclick="bulkAction(false)">
+                        Restore selection
+                    </button>
+                    <button id="selectionDeleteBtn" class="btn btn-danger" onclick="bulkAction(true)">
+                        Delete selection
+                    </button>
+                    <button class="btn btn-outline" onclick="clearSelection()">
+                        Cancel
+                    </button>
                 </div>
             </div>
 
@@ -588,12 +633,13 @@
                         <div class="field-box" style="gap: 5px;">
                             <span class="field-label">Delete strategy</span>
                             <select id="dedupeMode" class="select-sm">
-                                <option value="domain_all">Domain + User + Pass</option>
-                                <option value="url_all">Full URL + User + Pass</option>
-                                <option value="name_all">Site Name + User + Pass</option>
-                                <option value="user_pass">User + Pass (Global)</option>
-                                <option value="user">Username Only</option>
-                                <option value="incomplete">Incomplete (Empty User/Pass)</option>
+                                <option value="domain_all">Exact Match (Domain, User, Pass)</option>
+                                <option value="url_all">Exact Match (Full URL, User, Pass)</option>
+                                <option value="name_all">Exact Match (Site Name, User, Pass)</option>
+                                <option value="user_pass">Global Match (User & Pass only)</option>
+                                <option value="user">Uniform Match (Username only)</option>
+                                <option value="incomplete">Scrub: Empty User OR Pass</option>
+                                <option value="incomplete_both">Scrub: Empty User AND Pass</option>
                             </select>
                         </div>
                         <button class="btn btn-outline" onclick="toggleBulkReveal()" style="margin-top: 15px;"
@@ -627,6 +673,12 @@
             </div>
         </main>
     </div>
+    <div id="loader" class="loading-overlay hidden">
+        <div class="loader-card">
+            <div class="spinner"></div>
+            <p style="font-weight: 600; letter-spacing: 0.5px;">Processing Data...</p>
+        </div>
+    </div>
 
     <script>
         let bitwardenData = null;
@@ -659,21 +711,28 @@
 
             originalFileName = file.name;
             const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    bitwardenData = JSON.parse(event.target.result);
-                    if (!bitwardenData.items) throw new Error("This doesn't look like a Bitwarden export.");
 
-                    bitwardenData.items.forEach(item => item._isDeleted = false);
-                    uploadOverlay.classList.add('hidden');
-                    app.classList.remove('hidden');
-                    renderSidebar();
-                    renderTable();
-                } catch (err) {
-                    alert("Error: " + err.message);
-                }
-            };
-            reader.readAsText(file);
+            withLoader(() => {
+                return new Promise((resolve, reject) => {
+                    reader.onload = (event) => {
+                        try {
+                            bitwardenData = JSON.parse(event.target.result);
+                            if (!bitwardenData.items) throw new Error("This doesn't look like a Bitwarden export.");
+
+                            bitwardenData.items.forEach(item => item._isDeleted = false);
+                            uploadOverlay.classList.add('hidden');
+                            app.classList.remove('hidden');
+                            renderSidebar();
+                            renderTable();
+                            resolve();
+                        } catch (err) {
+                            alert("Error: " + err.message);
+                            reject(err);
+                        }
+                    };
+                    reader.readAsText(file);
+                });
+            });
         }
 
         function getBaseUrl(item) {
@@ -742,8 +801,11 @@
                         </td>
                         <td>
                             <div class="field-box">
-                                <span class="field-value">${name}</span>
-                                <div class="truncator field-sub">
+                                <div class="truncator field-value" onmouseenter="checkTruncation(this)">
+                                    <span class="truncator-text">${name}</span>
+                                    <span class="truncator-popover">${name}</span>
+                                </div>
+                                <div class="truncator field-sub" onmouseenter="checkTruncation(this)">
                                     <span class="truncator-text">${uri}</span>
                                     <span class="truncator-popover">${uri}</span>
                                 </div>
@@ -751,17 +813,19 @@
                         </td>
                         <td>
                             <div class="field-box">
-                                <span class="field-value" style="${!login.username ? 'color:var(--danger); font-style:italic;' : ''}">
-                                    ${login.username || 'Empty'}
-                                </span>
+                                <div class="truncator field-value" onmouseenter="checkTruncation(this)" style="${!login.username ? 'color:var(--danger); font-style:italic;' : ''}">
+                                    <span class="truncator-text">${login.username || 'Empty'}</span>
+                                    <span class="truncator-popover">${login.username || 'Empty'}</span>
+                                </div>
                             </div>
                         </td>
                         <td>
                             <div class="field-box">
                                 <div class="password-container" style="display:flex; justify-content:space-between; align-items:center;">
-                                    <div class="truncator password-val" style="flex:1; margin-right:8px;">
-                                        <span class="truncator-text">${isRevealed ? (login.password || 'none') : '••••••••'}</span>
-                                        <span class="truncator-popover">${isRevealed ? (login.password || 'none') : '••••••••'}</span>
+                                    <div class="truncator password-val" onmouseenter="checkTruncation(this)" 
+                                         style="flex:1; margin-right:8px; ${!login.password ? 'color:var(--danger); font-style:italic;' : ''}">
+                                        <span class="truncator-text">${login.password ? (isRevealed ? login.password : '••••••••') : 'Empty'}</span>
+                                        <span class="truncator-popover">${login.password ? (isRevealed ? login.password : '••••••••') : 'Empty'}</span>
                                     </div>
                                     <button class="btn btn-outline" style="padding:2px 6px; font-size:10px; flex-shrink: 0;" 
                                             onclick="event.stopPropagation(); togglePassword(${index})">
@@ -795,16 +859,32 @@
             if (row) {
                 const isRevealed = showAllPasswords !== showPasswords.has(idx);
                 const login = bitwardenData.items[idx].login || {};
-                const text = isRevealed ? (login.password || 'none') : '••••••••';
+                const text = login.password ? (isRevealed ? login.password : '••••••••') : 'Empty';
+                const isEmpty = !login.password;
 
                 const container = row.querySelector('.password-container');
+                const tWrap = container.querySelector('.truncator');
                 const tText = container.querySelector('.truncator-text');
                 const tPop = container.querySelector('.truncator-popover');
                 const btn = container.querySelector('button');
 
+                if (tWrap) tWrap.style.color = isEmpty ? 'var(--danger)' : '';
+                if (tWrap) tWrap.style.fontStyle = isEmpty ? 'italic' : '';
                 if (tText) tText.textContent = text;
                 if (tPop) tPop.textContent = text;
                 if (btn) btn.textContent = isRevealed ? 'Hide' : 'Show';
+
+                // Re-check truncation after text change
+                if (tWrap) checkTruncation(tWrap);
+            }
+        }
+
+        function checkTruncation(el) {
+            const text = el.querySelector('.truncator-text');
+            if (text && text.scrollWidth > text.clientWidth) {
+                el.classList.add('can-truncate');
+            } else {
+                el.classList.remove('can-truncate');
             }
         }
 
@@ -838,12 +918,14 @@
         }
 
         function toggleSelectAll() {
-            const visible = bitwardenData.items.map((item, index) => ({ item, index }))
-                .filter(entry => activeTab === 'all' || getBaseUrl(entry.item) === activeTab);
+            withLoader(() => {
+                const visible = bitwardenData.items.map((item, index) => ({ item, index }))
+                    .filter(entry => activeTab === 'all' || getBaseUrl(entry.item) === activeTab);
 
-            if (selectedIndices.size === visible.length) selectedIndices.clear();
-            else visible.forEach(v => selectedIndices.add(v.index));
-            renderTable();
+                if (selectedIndices.size === visible.length) selectedIndices.clear();
+                else visible.forEach(v => selectedIndices.add(v.index));
+                renderTable();
+            });
         }
 
         function updateSelectionBar() {
@@ -854,14 +936,10 @@
             document.getElementById('selectionText').textContent = `${count} items selected`;
 
             if (visible) {
-                let hasDeleted = false;
-                let hasActive = false;
-                selectedIndices.forEach(idx => {
-                    if (bitwardenData.items[idx]._isDeleted) hasDeleted = true;
-                    else hasActive = true;
-                });
-                document.getElementById('selectionRestoreBtn').disabled = !hasDeleted;
-                document.getElementById('selectionDeleteBtn').disabled = !hasActive;
+                // Always enable buttons; actions are safe no-ops if not applicable
+                // This also improves performance by avoiding iteration over all selected items
+                document.getElementById('selectionRestoreBtn').disabled = false;
+                document.getElementById('selectionDeleteBtn').disabled = false;
             }
         }
 
@@ -873,16 +951,34 @@
         }
 
         function toggleItem(idx) {
-            bitwardenData.items[idx]._isDeleted = !bitwardenData.items[idx]._isDeleted;
+            const item = bitwardenData.items[idx];
+            item._isDeleted = !item._isDeleted;
             hasUnsavedChanges = true;
-            renderTable();
+
+            // Individual update to avoid layout thrashing
+            const row = document.getElementById(`row-${idx}`);
+            if (row) {
+                const isDeleted = item._isDeleted;
+                row.classList.toggle('deleted', isDeleted);
+
+                const actionBtn = row.querySelector('.action-cell button');
+                if (actionBtn) {
+                    actionBtn.textContent = isDeleted ? 'Restore' : 'Delete';
+                    actionBtn.className = `btn ${isDeleted ? 'btn-outline' : 'btn-danger'}`;
+                }
+            }
+
+            updateStats();
+            updateSelectionBar();
             renderSidebar();
         }
 
         function bulkAction(shouldScrub) {
-            selectedIndices.forEach(idx => { bitwardenData.items[idx]._isDeleted = shouldScrub; });
-            hasUnsavedChanges = true;
-            clearSelection();
+            withLoader(() => {
+                selectedIndices.forEach(idx => { bitwardenData.items[idx]._isDeleted = shouldScrub; });
+                hasUnsavedChanges = true;
+                clearSelection();
+            });
         }
 
         function autoDedupe() {
@@ -895,6 +991,11 @@
 
                 if (mode === 'incomplete') {
                     if (!item.login?.username || !item.login?.password) { item._isDeleted = true; count++; }
+                    return;
+                }
+
+                if (mode === 'incomplete_both') {
+                    if (!item.login?.username && !item.login?.password) { item._isDeleted = true; count++; }
                     return;
                 }
 
@@ -920,6 +1021,40 @@
             renderTable();
             renderSidebar();
             alert(`Auto-delete complete. Marked ${count} potential duplicates for removal.`);
+        }
+
+        async function withLoader(callback) {
+            const loader = document.getElementById('loader');
+            const startTime = Date.now();
+
+            // OS-level cursor feedback is often more reliable
+            document.body.style.cursor = 'wait';
+
+            loader.classList.remove('hidden');
+            loader.style.opacity = '0';
+
+            // Ensure the browser has a chance to paint the loader
+            await new Promise(r => requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    loader.style.opacity = '1';
+                    r();
+                });
+            }));
+
+            try {
+                await callback();
+            } finally {
+                const elapsed = Date.now() - startTime;
+                const remaining = Math.max(0, 500 - elapsed);
+
+                // Ensure loader stays for at least 500ms to prevent flickering
+                await new Promise(r => setTimeout(r, remaining));
+
+                loader.style.opacity = '0';
+                document.body.style.cursor = 'default';
+                // Wait for fade out before hiding
+                setTimeout(() => loader.classList.add('hidden'), 300);
+            }
         }
 
         function downloadJSON() {
