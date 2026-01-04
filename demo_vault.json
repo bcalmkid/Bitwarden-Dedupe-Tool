@@ -1,0 +1,124 @@
+{
+    "items": [
+        {
+            "type": 1,
+            "name": "GitHub",
+            "login": {
+                "username": "coder_tony",
+                "password": "Password123!",
+                "uris": [
+                    {
+                        "uri": "https://github.com/login"
+                    }
+                ]
+            }
+        },
+        {
+            "type": 1,
+            "name": "GitHub (Old)",
+            "login": {
+                "username": "coder_tony",
+                "password": "Password123!",
+                "uris": [
+                    {
+                        "uri": "https://github.com/sessions"
+                    }
+                ]
+            },
+            "notes": "This is an exact duplicate by domain+user+pass"
+        },
+        {
+            "type": 1,
+            "name": "Google Account",
+            "login": {
+                "username": "tony@gmail.com",
+                "password": "SuperSecretPassword",
+                "uris": [
+                    {
+                        "uri": "https://accounts.google.com"
+                    }
+                ]
+            }
+        },
+        {
+            "type": 1,
+            "name": "YouTube",
+            "login": {
+                "username": "tony@gmail.com",
+                "password": "SuperSecretPassword",
+                "uris": [
+                    {
+                        "uri": "https://youtube.com"
+                    }
+                ]
+            },
+            "notes": "Weak duplicate: same user/pass but different domain"
+        },
+        {
+            "type": 1,
+            "name": "Bank of America",
+            "login": {
+                "username": "tony_bank",
+                "password": "BankPassword456",
+                "uris": [
+                    {
+                        "uri": "https://bankofamerica.com"
+                    }
+                ]
+            }
+        },
+        {
+            "type": 1,
+            "name": "Bank of America",
+            "login": {
+                "username": "tony_bank",
+                "password": "BankPassword789",
+                "uris": [
+                    {
+                        "uri": "https://boa.com"
+                    }
+                ]
+            },
+            "notes": "Site Name duplicate: same name, different credentials and URL"
+        },
+        {
+            "type": 1,
+            "name": "Identity Missing Pass",
+            "login": {
+                "username": "forgotten_user",
+                "password": "",
+                "uris": [
+                    {
+                        "uri": "https://incomplete-site.com"
+                    }
+                ]
+            }
+        },
+        {
+            "type": 1,
+            "name": "Identity Missing User",
+            "login": {
+                "username": "",
+                "password": "orphan_password",
+                "uris": [
+                    {
+                        "uri": "https://mystery-site.net"
+                    }
+                ]
+            }
+        },
+        {
+            "type": 1,
+            "name": "Unique Netflix Account",
+            "login": {
+                "username": "binge_watcher",
+                "password": "chill123",
+                "uris": [
+                    {
+                        "uri": "https://netflix.com"
+                    }
+                ]
+            }
+        }
+    ]
+}
