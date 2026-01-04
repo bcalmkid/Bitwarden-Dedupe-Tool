@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitwarden De-duplicator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --surface-hover: #334155;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --success: #10b981;
+            --glass: rgba(30, 41, 59, 0.7);
+            --border: rgba(255, 255, 255, 0.1);
+            --sidebar-w: 320px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            background-image:
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.1) 0px, transparent 50%);
+            color: var(--text);
+            min-height: 100vh;
+            overflow: hidden;
+            /* We'll scroll inside segments */
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* Layout */
+        .app-container {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+        }
+
+        .logo-area h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .main-content {
+            display: flex;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        /* Sidebar Tabs */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: rgba(0, 0, 0, 0.2);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .url-tab {
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 0.5rem;
+            border: 1px solid transparent;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .url-tab:hover {
+            background: var(--surface);
+        }
+
+        .url-tab.active {
+            background: var(--surface-hover);
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .url-tab .url-name {
+            font-size: 0.85rem;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 200px;
+        }
+
+        .url-tab .url-count {
+            font-size: 0.7rem;
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--primary);
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-weight: 700;
+        }
+
+        /* Table Area */
+        .viewport {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            background: rgba(15, 23, 42, 0.4);
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .mode-selector {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.6rem 0.8rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .btn {
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-restore {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .table-card {
+            background: var(--surface);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            text-align: left;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 1.25rem 1rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        .deleted-row {
+            opacity: 0.25;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .deleted-row td {
+            text-decoration: line-through;
+        }
+
+        .label-pill {
+            display: inline-block;
+            font-size: 0.6rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .label-user {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+        }
+
+        .label-pass {
+            background: rgba(167, 139, 250, 0.15);
+            color: #a78bfa;
+        }
+
+        .label-url {
+            background: rgba(148, 163, 184, 0.1);
+            color: var(--text-dim);
+        }
+
+        .upload-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .upload-box {
+            padding: 4rem;
+            border: 2px dashed var(--border);
+            border-radius: 30px;
+            background: var(--surface);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-box:hover {
+            border-color: var(--primary);
+            transform: scale(1.02);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="uploadOverlay" class="upload-overlay">
+        <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+            <h1 style="margin-bottom: 1rem; font-size: 3rem;">📦</h1>
+            <h2 style="margin-bottom: 0.5rem;">Drop Bitwarden JSON</h2>
+            <p style="color: var(--text-dim);">Your data never leaves your computer.</p>
+            <input type="file" id="fileInput" accept=".json" class="hidden">
+        </div>
+    </div>
+
+    <div class="app-container hidden" id="app">
+        <header>
+            <div class="logo-area">
+                <h1>BITWARDEN DEDUPE</h1>
+            </div>
+            <div class="controls">
+                <select id="dedupeMode" class="mode-selector">
+                    <option value="all">Strict: URL + User + Pass</option>
+                    <option value="user_pass">User + Pass (Multi-Site)</option>
+                    <option value="user">Username Only</option>
+                    <option value="pass">Password Only</option>
+                    <option value="incomplete">Incomplete (No User OR No Pass)</option>
+                </select>
+                <button class="btn btn-secondary" onclick="autoDedupe()">
+                    Auto Dedupe
+                </button>
+                <button class="btn btn-primary" onclick="downloadJSON()">
+                    Export Cleaned JSON
+                </button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h3 style="font-size: 0.9rem; color: var(--text-dim); text-transform: uppercase;">Groups by URL</h3>
+                </div>
+                <div class="sidebar-list" id="sidebarList">
+                    <!-- Tabs generate here -->
+                </div>
+            </aside>
+
+            <main class="viewport">
+                <div id="currentTabHeader" style="margin-bottom: 1.5rem;">
+                    <h2 id="tabTitle">All Logins</h2>
+                    <p id="tabSubtitle" style="color: var(--text-dim); font-size: 0.9rem;">Reviewing all items in your
+                        vault</p>
+                </div>
+
+                <div class="table-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 40%;">Site & URL</th>
+                                <th style="width: 25%;">Identity</th>
+                                <th style="width: 25%;">Secret</th>
+                                <th style="width: 10%; text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        let bitwardenData = null;
+        let activeTab = 'all';
+        let originalFileName = "";
+        let hasUnsavedChanges = false;
+
+        const fileInput = document.getElementById('fileInput');
+        const uploadOverlay = document.getElementById('uploadOverlay');
+        const app = document.getElementById('app');
+        const itemsTableBody = document.getElementById('itemsTableBody');
+        const sidebarList = document.getElementById('sidebarList');
+
+        fileInput.addEventListener('change', handleFile);
+
+        document.body.addEventListener('dragover', (e) => e.preventDefault());
+        document.body.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile({ target: { files: [file] } });
+        });
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            originalFileName = file.name;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    bitwardenData = JSON.parse(event.target.result);
+                    if (!bitwardenData.items) throw new Error("Missing 'items' array");
+
+                    bitwardenData.items.forEach(item => item._isDeleted = false);
+                    uploadOverlay.classList.add('hidden');
+                    app.classList.remove('hidden');
+                    renderSidebar();
+                    renderTable();
+                } catch (err) {
+                    alert("Error: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function getBaseUrl(item) {
+            if (item.type !== 1) return "Other Items";
+            const login = item.login || {};
+            if (!login.uris || login.uris.length === 0) return "No URL";
+
+            try {
+                let raw = login.uris[0].uri || "";
+                if (!raw.includes('://')) raw = 'http://' + raw;
+                const url = new URL(raw);
+                return url.hostname.replace('www.', '');
+            } catch {
+                return "Invalid URL";
+            }
+        }
+
+        function renderSidebar() {
+            const groups = { 'all': 0 };
+            bitwardenData.items.forEach(item => {
+                const url = getBaseUrl(item);
+                groups[url] = (groups[url] || 0) + 1;
+                groups['all']++;
+            });
+
+            const sortedKeys = Object.keys(groups).sort((a, b) => {
+                if (a === 'all') return -1;
+                if (b === 'all') return 1;
+                return groups[b] - groups[a];
+            });
+
+            sidebarList.innerHTML = sortedKeys.map(key => `
+                <div class="url-tab ${activeTab === key ? 'active' : ''}" onclick="setTab('${key}')">
+                    <span class="url-name">${key === 'all' ? 'Everything' : key}</span>
+                    <span class="url-count">${groups[key]}</span>
+                </div>
+            `).join('');
+        }
+
+        function setTab(key) {
+            activeTab = key;
+            document.getElementById('tabTitle').textContent = key === 'all' ? 'All Logins' : key;
+            renderSidebar();
+            renderTable();
+        }
+
+        function renderTable() {
+            itemsTableBody.innerHTML = '';
+
+            const filtered = bitwardenData.items.filter(item => {
+                if (activeTab === 'all') return true;
+                return getBaseUrl(item) === activeTab;
+            });
+
+            filtered.forEach((item, index) => {
+                const globalIndex = bitwardenData.items.indexOf(item);
+                const tr = document.createElement('tr');
+                if (item._isDeleted) tr.className = 'deleted-row';
+
+                const login = item.login || {};
+                const uri = (login.uris && login.uris.length > 0) ? login.uris[0].uri : "N/A";
+
+                tr.innerHTML = `
+                    <td>
+                        <span class="label-pill label-url">URL / Label</span><br>
+                        <strong>${item.name || 'Unnamed'}</strong><br>
+                        <small style="color:var(--text-dim); word-break: break-all;">${uri}</small>
+                    </td>
+                    <td>
+                        <span class="label-pill label-user">Username</span><br>
+                        ${login.username || '<em style="color:var(--danger)">Empty</em>'}
+                    </td>
+                    <td>
+                        <span class="label-pill label-pass">Password</span><br>
+                        <span style="font-family: monospace; font-size: 1.1rem; color: #a78bfa;">
+                            ${login.password || '<em style="color:var(--danger)">Empty</em>'}
+                        </span>
+                    </td>
+                    <td style="text-align: right;">
+                        <button class="btn ${item._isDeleted ? 'btn-restore' : 'btn-danger'}" onclick="toggleItem(${globalIndex})">
+                            ${item._isDeleted ? 'Restore' : 'Delete'}
+                        </button>
+                    </td>
+                `;
+                itemsTableBody.appendChild(tr);
+            });
+        }
+
+        function toggleItem(idx) {
+            bitwardenData.items[idx]._isDeleted = !bitwardenData.items[idx]._isDeleted;
+            hasUnsavedChanges = true;
+            renderTable();
+            renderSidebar();
+        }
+
+        function getDedupeKey(item, mode) {
+            if (item.type !== 1) return null;
+            const login = item.login || {};
+            const user = (login.username || "").trim().toLowerCase();
+            const pass = (login.password || "").trim();
+            const url = getBaseUrl(item);
+
+            switch (mode) {
+                case 'user': return user;
+                case 'pass': return pass;
+                case 'user_pass': return `${user}|${pass}`;
+                case 'all': return `${url}|${user}|${pass}`;
+                case 'incomplete': return (user === "" || pass === "") ? Math.random() : null; // Random key to just trigger "deleted" if condition met
+                default: return null;
+            }
+        }
+
+        function autoDedupe() {
+            const mode = document.getElementById('dedupeMode').value;
+            const seen = new Set();
+            let count = 0;
+
+            bitwardenData.items.forEach(item => {
+                if (item._isDeleted || item.type !== 1) return;
+
+                if (mode === 'incomplete') {
+                    const login = item.login || {};
+                    if (!login.username || !login.password) {
+                        item._isDeleted = true;
+                        count++;
+                    }
+                    return;
+                }
+
+                const key = getDedupeKey(item, mode);
+                if (!key) return;
+
+                if (seen.has(key)) {
+                    item._isDeleted = true;
+                    count++;
+                } else {
+                    seen.add(key);
+                }
+            });
+
+            hasUnsavedChanges = true;
+            renderTable();
+            renderSidebar();
+            alert(`Marked ${count} items as deleted based on strategy.`);
+        }
+
+        function downloadJSON() {
+            const clean = bitwardenData.items
+                .filter(i => !i._isDeleted)
+                .map(({ _isDeleted, ...rest }) => rest);
+
+            const blob = new Blob([JSON.stringify({ ...bitwardenData, items: clean }, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = originalFileName.replace('.json', '') + '_clean.json';
+            a.click();
+            hasUnsavedChanges = false;
+        }
+
+        window.onbeforeunload = (e) => { if (hasUnsavedChanges) return "You have unsaved changes!"; };
+    </script>
+</body>
+
+</html>
