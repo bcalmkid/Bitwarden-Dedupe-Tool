@@ -1,49 +1,56 @@
 # Bitwarden Deduplicator
 
-A high-performance, secure, and modern web-based tool for cleaning up duplicate entries in your Bitwarden vault. This tool runs entirely in your browser—your sensitive data never leaves your computer.
+A high-performance, secure, and modern web-based tool for cleaning up duplicate entries in your Bitwarden vault. This tool runs entirely in your browser—your sensitive data never leaves your computer. Specifically rebranded to match the official **Bitwarden Web Vault** aesthetic.
+
+**[Try the Live Version Here](https://bcalmkid.github.io/Bitwarden-Dedupe-Tool/dedupe.html)**
 
 ## 🚀 Key Features
 
 -   **Zero-Knowledge Privacy**: No server-side processing. All JSON parsing and deduplication happen locally in your browser.
--   **Intelligent Scrubbing**: Choose from 6 different "Delete Strategies" to find duplicates based on your specific needs.
--   **Modern Dashboard**: A premium, accessible UI with dark mode, sticky headers, and smooth animations.
--   **Bulk Management**: Quickly select multiple items and perform batch deletes or restores.
--   **Domain Grouping**: Automatically groups vault items by domain for easy navigation.
--   **Performance Optimized**: Designed to handle vaults with thousands of entries using GPU-accelerated animations and localized UI updates.
--   **Security First**: Passwords are masked by default. Supports individual reveal or global "Reveal All" for quick auditing.
+-   **Official Bitwarden Aesthetic**: A premium interface that mirrors the official web vault, including deep navy/gray palettes and professional typography.
+-   **Intelligent Scrubbing**: Choose from 7 different "Delete Strategies" to find duplicates or incomplete entries based on your specific needs.
+-   **Unified View**: Site names and identities are combined into a single, clean column for better readability.
+-   **Dynamic Themes**: Toggle between Dark and Light modes with persistent settings saved to your browser.
+-   **Bulk Management**: Powerful selection bar for batch deletes or restores with prioritized primary actions.
+-   **Domain Grouping & Search**: Automatically groups vault items by domain and provides a real-time search for quick navigation.
+-   **Performance Optimized**: Handles vaults with thousands of entries smoothly using localized DOM updates and efficient filtering.
+-   **Credential Safety**: Passwords are masked and styled for clarity (e.g., "Empty" indicators for missing data). Supports individual or global reveal.
 
 ## 🛠️ Delete Strategies
 
-The tool provides granular control over how duplicates are identified:
+The tool provides granular control over how duplicates and incomplete items are identified:
 
 | Strategy | Description |
 | :--- | :--- |
-| **Domain + User + Pass** | Matches entries with the same base domain (e.g., github.com) and credentials. |
-| **Full URL + User + Pass** | Precise matching based on the exact URI path. |
-| **Site Name + User + Pass** | Matches based on the display name of the vault item. |
-| **User + Pass (Global)** | Finds identical credentials shared across any site. |
-| **Username Only** | Audits all locations where a specific username is used. |
-| **Incomplete** | Flags any entries missing either a username or a password. |
+| **Exact Match (Domain, User, Pass)** | Matches entries with the same base domain (e.g., github.com) and credentials. (Default) |
+| **Exact Match (Full URL, User, Pass)** | Precise matching based on the exact URI path. |
+| **Exact Match (Site Name, User, Pass)** | Matches based on the display name of the vault item. |
+| **Global Match (User & Pass only)** | Finds identical credentials shared across *any* site in your vault. |
+| **Uniform Match (Username only)** | Audits all locations where a specific username is used. |
+| **Scrub: Empty User OR Pass** | Flags any entries missing either a username or a password for removal. |
+| **Scrub: Empty User AND Pass** | Specifically targets "junk" entries where both username and password fields are empty. |
 
 ## 📖 How to Use
 
 1.  **Export Your Vault**: In Bitwarden, go to *Tools* > *Export Vault* and select **.json** format.
 2.  **Import**: Drag and drop your `.json` file into the Deduplicator or click "Choose File".
-3.  **Audit**: Use the sidebar to browse by domain or use "Run auto-delete" with your preferred strategy.
-4.  **Review**: Manually restore or delete items as needed. You can use the "Reveal all passwords" button to compare secrets.
-5.  **Export**: Click **Export deduped** to download your cleaned JSON file.
-6.  **Import to Bitwarden**: (Optional) You can clear your vault and import the cleaned file, or use it as a reference for manual cleanup.
+3.  **Navigate**: Use the sidebar to browse by domain or the search bar to find specific sites.
+4.  **Auto-Delete**: select a strategy from the dropdown and click **Run auto-delete**. This will mark potential duplicates for removal (indicated by a faded row).
+5.  **Audit**: Review the marked items. You can manually **Delete** or **Restore** any item. Use "Reveal all passwords" to compare secrets.
+6.  **Bulk Action**: Select multiple items using checkboxes to perform batch operations via the top selection bar.
+7.  **Export**: Click **Export cleaned** to download your finalized JSON file.
+8.  **Import to Bitwarden**: Your cleaned file is ready for import back into Bitwarden. 
 
 ## 💻 Tech Stack
 
 -   **Frontend**: Vanilla HTML5, CSS3, and JavaScript (ES6+).
--   **Typography**: Google Fonts (Inter, Outfit).
--   **Aesthetics**: Glassmorphism, CSS Transitions, and SVG icons.
--   **Performance**: DocumentFragment rendering and CSS Transform-based animations.
+-   **Icons & Style**: CSS-based UI components following Bitwarden's design language.
+-   **Typography**: JetBrains Mono for passwords, Inter/Outfit for UI text.
+-   **Logic**: Efficient JavaScript filtering and set-based deduplication algorithms.
 
 ## 🔒 Security Note
 
-This tool is a static HTML file. It does not use any third-party tracking, cookies, or analytics. Your vault data is processed in memory and is lost as soon as the tab is closed.
+This tool is a completely static application. It does not use any third-party tracking, cookies, or external APIs. Your vault data resides ONLY in your browser's memory and is instantly cleared as soon as you refresh or close the tab.
 
 ---
-*Created with focus on privacy, speed, and clean UX.*
+*Clean your vault with confidence and privacy.*
