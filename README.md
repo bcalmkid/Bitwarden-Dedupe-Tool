@@ -14,7 +14,19 @@ A high-performance, secure, and modern web-based tool for cleaning up duplicate 
 -   **Bulk Management**: Powerful selection bar for batch deletes or restores with prioritized primary actions.
 -   **Domain Grouping & Search**: Automatically groups vault items by domain and provides a real-time search for quick navigation.
 -   **Performance Optimized**: Handles vaults with thousands of entries smoothly using localized DOM updates and efficient filtering.
+-   **Review Mode**: A dedicated "Review Deleted" toggle that filters the vault to show ONLY marked items, complete with a "Reason" column explaining each deletion.
 -   **Credential Safety**: Passwords are masked and styled for clarity (e.g., "Empty" indicators for missing data). Supports individual or global reveal.
+
+## 📸 Interface
+
+<p align="center">
+  <img src="interface/screenshots/dashboard.png" alt="Main Dashboard" width="400">
+  <img src="interface/screenshots/review.png" alt="Review Mode" width="400">
+</p>
+<p align="center">
+  <img src="interface/screenshots/strategies.png" alt="Delete Strategies" width="400">
+  <img src="interface/screenshots/automation.png" alt="Auto-Delete Logic" width="400">
+</p>
 
 ## 🛠️ Delete Strategies
 

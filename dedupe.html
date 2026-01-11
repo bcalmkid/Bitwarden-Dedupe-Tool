@@ -209,18 +209,20 @@
 
         /* Fixed Toolbar */
         .toolbar {
-            padding: 1.5rem;
+            padding: 1rem 1.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            /* Center the title and the action block */
             background: var(--bg);
             border-bottom: 1px solid var(--border);
+            min-height: 80px;
         }
 
         .action-group {
             display: flex;
-            gap: 0.75rem;
-            align-items: center;
+            gap: 1rem;
+            align-items: flex-end;
         }
 
         /* Select Bar (Contextual) */
@@ -327,7 +329,14 @@
         }
 
         tbody tr.deleted {
-            opacity: 0.4;
+            opacity: 0.6;
+        }
+
+        tbody tr.deleted .reason-badge {
+            opacity: 1;
+            background: rgba(226, 78, 77, 0.2);
+            color: #ff8e8d;
+            /* Brighter red for dark mode */
         }
 
         td {
@@ -349,9 +358,11 @@
         }
 
         .field-label {
-            font-size: 0.65rem;
-            font-weight: 700;
+            font-size: 0.75rem;
+            font-weight: 600;
             color: var(--text-muted);
+            margin-bottom: 4px;
+            /* More space for the label */
         }
 
         .field-value {
@@ -497,12 +508,14 @@
             background: var(--bg);
         }
 
-        .custom-checkbox:checked {
+        .custom-checkbox:checked,
+        .custom-checkbox.checked {
             background: var(--primary);
             border-color: var(--primary);
         }
 
-        .custom-checkbox:checked::after {
+        .custom-checkbox:checked::after,
+        .custom-checkbox.checked::after {
             content: '✓';
             position: absolute;
             color: #fff;
@@ -510,6 +523,65 @@
             left: 50%;
             top: 50%;
             transform: translate(-50%, -50%);
+        }
+
+        /* Toggle Switch */
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text);
+            user-select: none;
+            height: 38px;
+            /* Match height of select/buttons */
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 36px;
+            height: 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            transition: var(--transition);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 14px;
+            height: 14px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        input:checked+.toggle-switch {
+            background: var(--danger);
+            border-color: var(--danger);
+        }
+
+        input:checked+.toggle-switch::after {
+            transform: translateX(16px);
+            background: #fff;
+        }
+
+        /* Review Mode Reason Badge */
+        .reason-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            background: rgba(226, 78, 77, 0.2);
+            color: #ff8e8d;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border: 1px solid rgba(226, 78, 77, 0.4);
+            white-space: nowrap;
+            letter-spacing: 0.3px;
         }
 
         /* Upload States */
@@ -680,7 +752,7 @@
                         <h2 id="tabTitle" style="font-size: 1.5rem;">Everything</h2>
                     </div>
                     <div class="action-group">
-                        <div class="field-box" style="gap: 5px;">
+                        <div class="field-box">
                             <span class="field-label">Delete strategy</span>
                             <select id="dedupeMode" class="select-sm">
                                 <option value="domain_all">Exact Match (Domain, User, Pass)</option>
@@ -692,11 +764,15 @@
                                 <option value="incomplete_both">Scrub: Empty User AND Pass</option>
                             </select>
                         </div>
-                        <button class="btn btn-outline" onclick="toggleBulkReveal()" style="margin-top: 15px;"
-                            id="bulkRevealBtn">
+                        <label class="toggle-label">
+                            <input type="checkbox" onchange="toggleReviewMode(this)" class="hidden">
+                            <div class="toggle-switch"></div>
+                            <span>Review Deleted</span>
+                        </label>
+                        <button class="btn btn-outline" onclick="toggleBulkReveal()" id="bulkRevealBtn">
                             Reveal all passwords
                         </button>
-                        <button class="btn btn-outline" onclick="autoDedupe()" style="margin-top: 15px;">
+                        <button class="btn btn-outline" onclick="autoDedupe()">
                             Run auto-delete
                         </button>
                     </div>
@@ -737,6 +813,7 @@
         let selectedIndices = new Set();
         let showPasswords = new Set();
         let showAllPasswords = false;
+        let filterDeletedOnly = false;
 
         // Theme Handling
         function initTheme() {
@@ -827,6 +904,8 @@
             const filter = document.getElementById('sidebarSearch').value.toLowerCase();
             const groups = { 'all': 0 };
             bitwardenData.items.forEach(item => {
+                if (filterDeletedOnly && !item._isDeleted) return; // Review Mode: Only count deleted
+
                 const url = getBaseUrl(item);
                 groups[url] = (groups[url] || 0) + 1;
                 groups['all']++;
@@ -857,8 +936,22 @@
         }
 
         function renderTable() {
+            // Update Headers for Review Mode
+            const reasonHeaderHtml = filterDeletedOnly ? '<th scope="col" style="width: 20%;">Reason</th>' : '';
+            const headerRow = document.querySelector('thead tr');
+            headerRow.innerHTML = `
+                <th class="checkbox-cell">
+                    <input type="checkbox" class="custom-checkbox" id="selectAll" onclick="toggleSelectAll()">
+                </th>
+                <th scope="col">Name</th>
+                ${reasonHeaderHtml}
+                <th scope="col">Password</th>
+                <th scope="col" class="action-cell">Action</th>
+            `;
+
             const filtered = bitwardenData.items.map((item, index) => ({ item, index }))
-                .filter(entry => activeTab === 'all' || getBaseUrl(entry.item) === activeTab);
+                .filter(entry => activeTab === 'all' || getBaseUrl(entry.item) === activeTab)
+                .filter(entry => !filterDeletedOnly || entry.item._isDeleted); // Review Mode Filter
 
             const rowsHtml = filtered.map(({ item, index }) => {
                 const login = item.login || {};
@@ -867,6 +960,10 @@
                 const isRevealed = showAllPasswords !== showPasswords.has(index);
                 const isSelected = selectedIndices.has(index);
                 const isDeleted = item._isDeleted;
+
+                const reasonCell = filterDeletedOnly
+                    ? `<td><span class="reason-badge">${item._deleteReason || 'Manual Delete'}</span></td>`
+                    : '';
 
                 return `
                     <tr id="row-${index}" class="${isDeleted ? 'deleted' : ''} ${isSelected ? 'selected' : ''}" onclick="toggleSelect(${index})">
@@ -887,6 +984,7 @@
                                 </div>
                             </div>
                         </td>
+                        ${reasonCell}
                         <td>
                             <div class="field-box">
                                 <div class="password-container" style="display:flex; justify-content:space-between; align-items:center;">
@@ -961,6 +1059,12 @@
             showPasswords.clear(); // Reset individual overrides when switching global mode
             const btn = document.getElementById('bulkRevealBtn');
             btn.textContent = showAllPasswords ? 'Hide all passwords' : 'Reveal all passwords';
+            renderTable();
+        }
+
+        function toggleReviewMode(checkbox) {
+            filterDeletedOnly = checkbox.checked;
+            renderSidebar();
             renderTable();
         }
 
@@ -1067,6 +1171,7 @@
                 if (mode === 'incomplete') {
                     if (isUserEmpty || isPassEmpty) {
                         item._isDeleted = true;
+                        item._deleteReason = "Scrub: Incomplete";
                         count++;
                     }
                     return;
@@ -1075,6 +1180,7 @@
                 if (mode === 'incomplete_both') {
                     if (isUserEmpty && isPassEmpty) {
                         item._isDeleted = true;
+                        item._deleteReason = "Scrub: Empty User & Pass";
                         count++;
                     }
                     return;
@@ -1097,6 +1203,7 @@
 
                 if (seen.has(key)) {
                     item._isDeleted = true;
+                    item._deleteReason = "Duplicate: " + document.querySelector(`#dedupeMode option[value="${mode}"]`).text;
                     count++;
                 } else {
                     seen.add(key);
