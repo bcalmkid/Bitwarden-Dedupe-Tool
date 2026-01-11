@@ -972,6 +972,7 @@
         let focusedIdx = -1;
         let visibleIndices = [];
         let dashboardShowPasswords = new Set();
+        let dashboardPasswordMap = {};
 
         // Theme Handling
         function initTheme() {
@@ -1247,17 +1248,19 @@
             `;
 
             const reuseBody = document.getElementById('statReuseList');
+            dashboardPasswordMap = {};
+
             if (reusedList.length === 0) {
                 reuseBody.innerHTML = `<tr><td style="color: var(--success); text-align: center; padding: 2rem;">No reused passwords found! Great job.</td></tr>`;
             } else {
-                reuseBody.innerHTML = reusedList.map(([pass, count]) => {
+                reuseBody.innerHTML = reusedList.map(([pass, count], i) => {
+                    dashboardPasswordMap[i] = pass;
                     const isRevealed = dashboardShowPasswords.has(pass);
-                    const b64 = btoa(unescape(encodeURIComponent(pass)));
                     return `
                     <tr>
                         <td style="padding: 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
                             <code style="color: var(--primary-light); font-family: monospace;">${isRevealed ? pass.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : '••••••••'}</code>
-                            <button class="btn btn-outline" style="padding: 2px 8px; font-size: 0.7rem;" onclick="toggleDashboardPassword(atob('${b64}'))">
+                            <button class="btn btn-outline" style="padding: 2px 8px; font-size: 0.7rem;" onclick="toggleDashboardPassword(${i})">
                                 ${isRevealed ? 'Hide' : 'Show'}
                             </button>
                         </td>
@@ -1288,7 +1291,10 @@
             healthGrade.className = 'health-grade ' + gradeClass;
         }
 
-        function toggleDashboardPassword(pass) {
+        function toggleDashboardPassword(idx) {
+            const pass = dashboardPasswordMap[idx];
+            if (!pass) return;
+
             if (dashboardShowPasswords.has(pass)) dashboardShowPasswords.delete(pass);
             else dashboardShowPasswords.add(pass);
             renderDashboard();
