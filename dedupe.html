@@ -1252,11 +1252,12 @@
             } else {
                 reuseBody.innerHTML = reusedList.map(([pass, count]) => {
                     const isRevealed = dashboardShowPasswords.has(pass);
+                    const b64 = btoa(unescape(encodeURIComponent(pass)));
                     return `
                     <tr>
                         <td style="padding: 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-                            <code style="color: var(--primary-light); font-family: monospace;">${isRevealed ? pass : '••••••••'}</code>
-                            <button class="btn btn-outline" style="padding: 2px 8px; font-size: 0.7rem;" onclick="toggleDashboardPassword('${pass.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">
+                            <code style="color: var(--primary-light); font-family: monospace;">${isRevealed ? pass.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : '••••••••'}</code>
+                            <button class="btn btn-outline" style="padding: 2px 8px; font-size: 0.7rem;" onclick="toggleDashboardPassword(atob('${b64}'))">
                                 ${isRevealed ? 'Hide' : 'Show'}
                             </button>
                         </td>
