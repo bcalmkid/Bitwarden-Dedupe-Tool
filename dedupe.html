@@ -324,6 +324,11 @@
             background: var(--surface-hover);
         }
 
+        tbody tr.focused {
+            background: var(--surface-hover);
+            box-shadow: inset 4px 0 0 0 var(--primary) !important;
+        }
+
         tbody tr.selected {
             background: rgba(59, 130, 246, 0.08);
         }
@@ -620,6 +625,108 @@
             display: none !important;
         }
 
+        /* Dashboard Styles */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            padding: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-title {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-heading);
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .health-grade {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #fff;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .grade-a {
+            background: linear-gradient(135deg, #28c76f, #48da89);
+        }
+
+        .grade-b {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+
+        .grade-c {
+            background: linear-gradient(135deg, #f1c40f, #f39c12);
+        }
+
+        .grade-f {
+            background: linear-gradient(135deg, #ea5455, #ff9f43);
+        }
+
+        .issue-list {
+            margin-top: 0.5rem;
+        }
+
+        .issue-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .indicator.red {
+            background: var(--danger);
+        }
+
+        .indicator.yellow {
+            background: #f1c40f;
+        }
+
+        .indicator.green {
+            background: var(--success);
+        }
+
         /* Accessibility: Skip to content */
         .skip-link {
             position: absolute;
@@ -716,6 +823,10 @@
                     <span id="themeToggleIcon">🌙</span>
                     <span id="themeToggleText">Dark Mode</span>
                 </button>
+                <button class="btn btn-outline" onclick="resetApp()" title="Clear all and start over">
+                    <span>🔄</span>
+                    <span>Reset</span>
+                </button>
                 <button class="btn btn-primary" onclick="downloadJSON()">Export cleaned</button>
             </div>
         </nav>
@@ -778,7 +889,7 @@
                     </div>
                 </div>
 
-                <div class="table-wrap">
+                <div class="table-wrap" id="tableView">
                     <table role="grid">
                         <thead>
                             <tr>
@@ -794,6 +905,50 @@
                         <tbody id="itemsTableBody">
                         </tbody>
                     </table>
+                </div>
+
+                <div id="dashboardView" class="hidden">
+                    <div class="dashboard-grid">
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">Overall Security Grade</span>
+                                <div id="healthGrade" class="health-grade grade-a">A</div>
+                            </div>
+                            <div class="issue-list" id="healthIssues">
+                                <!-- Issues list -->
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <span class="stat-title">Vault Coverage</span>
+                            <div class="stat-value" id="statUniqueSites">0</div>
+                            <span class="field-sub">Unique base domains extracted</span>
+                        </div>
+
+                        <div class="stat-card">
+                            <span class="stat-title">Password Hygiene</span>
+                            <div class="issue-list" id="hygieneStats">
+                                <div class="issue-item">
+                                    <div class="indicator red"></div>
+                                    <span><strong id="statDuplicatePass">0</strong> Reused Passwords</span>
+                                </div>
+                                <div class="issue-item">
+                                    <div class="indicator yellow"></div>
+                                    <span><strong id="statEmptyPass">0</strong> Missing Passwords</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card" style="grid-column: 1 / -1;">
+                            <span class="stat-title">Most Reused Passwords</span>
+                            <table
+                                style="margin-top: 1rem; width: 100%; border-collapse: separate; border-spacing: 0 8px;">
+                                <tbody id="statReuseList">
+                                    <!-- Top reused passwords -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -814,6 +969,8 @@
         let showPasswords = new Set();
         let showAllPasswords = false;
         let filterDeletedOnly = false;
+        let focusedIdx = -1;
+        let visibleIndices = [];
 
         // Theme Handling
         function initTheme() {
@@ -873,6 +1030,10 @@
                             bitwardenData.items = bitwardenData.items.filter(item => item.type === 1);
                             bitwardenData.items.forEach(item => item._isDeleted = false);
 
+                            if (restoreWorkInProgress()) {
+                                hasUnsavedChanges = true;
+                            }
+
                             uploadOverlay.classList.add('hidden');
                             app.classList.remove('hidden');
                             renderSidebar();
@@ -919,7 +1080,12 @@
                     return groups[b] - groups[a];
                 });
 
-            sidebarList.innerHTML = sortedKeys.map(key => `
+            sidebarList.innerHTML = `
+                <div class="nav-item ${activeTab === 'dashboard' ? 'active' : ''}" onclick="setTab('dashboard')" 
+                     style="margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
+                    <span>🛡️ Health Report</span>
+                </div>
+            ` + sortedKeys.map(key => `
                 <div class="nav-item ${activeTab === key ? 'active' : ''}" onclick="setTab('${key}')">
                     <span>${key === 'all' ? 'All Items' : key}</span>
                     <span class="count">${groups[key]}</span>
@@ -929,10 +1095,18 @@
 
         function setTab(key) {
             activeTab = key;
-            document.getElementById('tabTitle').textContent = key === 'all' ? 'Everything' : key;
+            const isDashboard = key === 'dashboard';
+
+            document.getElementById('tabTitle').textContent = isDashboard ? 'Vault Health Report' : (key === 'all' ? 'Everything' : key);
+            document.getElementById('tableView').classList.toggle('hidden', isDashboard);
+            document.querySelector('.toolbar').classList.toggle('hidden', isDashboard);
+            document.getElementById('dashboardView').classList.toggle('hidden', !isDashboard);
+
             selectedIndices.clear();
             renderSidebar();
-            renderTable();
+
+            if (isDashboard) renderDashboard();
+            else renderTable();
         }
 
         function renderTable() {
@@ -953,6 +1127,8 @@
                 .filter(entry => activeTab === 'all' || getBaseUrl(entry.item) === activeTab)
                 .filter(entry => !filterDeletedOnly || entry.item._isDeleted); // Review Mode Filter
 
+            visibleIndices = filtered.map(f => f.index);
+
             const rowsHtml = filtered.map(({ item, index }) => {
                 const login = item.login || {};
                 const name = item.name || 'Unnamed';
@@ -960,13 +1136,14 @@
                 const isRevealed = showAllPasswords !== showPasswords.has(index);
                 const isSelected = selectedIndices.has(index);
                 const isDeleted = item._isDeleted;
+                const isFocused = index === focusedIdx;
 
                 const reasonCell = filterDeletedOnly
                     ? `<td><span class="reason-badge">${item._deleteReason || 'Manual Delete'}</span></td>`
                     : '';
 
                 return `
-                    <tr id="row-${index}" class="${isDeleted ? 'deleted' : ''} ${isSelected ? 'selected' : ''}" onclick="toggleSelect(${index})">
+                    <tr id="row-${index}" class="${isDeleted ? 'deleted' : ''} ${isSelected ? 'selected' : ''} ${isFocused ? 'focused' : ''}" onclick="toggleSelect(${index})">
                         <td class="checkbox-cell">
                             <input type="checkbox" class="custom-checkbox" 
                                    ${isSelected ? 'checked' : ''} 
@@ -1014,6 +1191,93 @@
             itemsTableBody.innerHTML = rowsHtml;
             updateStats();
             updateSelectionBar();
+
+            if (focusedIdx === -1 && visibleIndices.length > 0) {
+                moveFocus(0);
+            }
+        }
+
+        function pluralize(count, singular, plural = singular + 's') {
+            return `${count} ${count === 1 ? singular : plural}`;
+        }
+
+        function renderDashboard() {
+            const items = bitwardenData.items;
+            const passReuse = {};
+            let emptyPassCount = 0;
+            const domains = new Set();
+
+            items.forEach(item => {
+                if (item._isDeleted) return;
+                const login = item.login || {};
+                const pass = login.password;
+                const dom = getBaseUrl(item);
+
+                if (dom !== "Misc URL") domains.add(dom);
+                if (!pass) emptyPassCount++;
+                else {
+                    passReuse[pass] = (passReuse[pass] || 0) + 1;
+                }
+            });
+
+            const reusedList = Object.entries(passReuse)
+                .filter(([_, count]) => count > 1)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+
+            const totalReuseCount = reusedList.reduce((acc, curr) => acc + curr[1], 0);
+
+            // Update UI Counters
+            document.getElementById('statUniqueSites').textContent = domains.size;
+            document.getElementById('statDuplicatePass').textContent = totalReuseCount;
+            document.getElementById('statEmptyPass').textContent = emptyPassCount;
+
+            // Fix card labels
+            const hygieneBody = document.getElementById('hygieneStats');
+            hygieneBody.innerHTML = `
+                <div class="issue-item">
+                    <div class="indicator ${totalReuseCount > 0 ? 'red' : 'green'}"></div>
+                    <span><strong>${totalReuseCount}</strong> ${totalReuseCount === 1 ? 'Reused Password' : 'Reused Passwords'}</span>
+                </div>
+                <div class="issue-item">
+                    <div class="indicator ${emptyPassCount > 0 ? 'yellow' : 'green'}"></div>
+                    <span><strong>${emptyPassCount}</strong> ${emptyPassCount === 1 ? 'Missing Password' : 'Missing Passwords'}</span>
+                </div>
+            `;
+
+            const reuseBody = document.getElementById('statReuseList');
+            if (reusedList.length === 0) {
+                reuseBody.innerHTML = `<tr><td style="color: var(--success); text-align: center; padding: 2rem;">No reused passwords found! Great job.</td></tr>`;
+            } else {
+                reuseBody.innerHTML = reusedList.map(([pass, count]) => `
+                    <tr>
+                        <td style="padding: 10px; border-bottom: 1px solid var(--border);">
+                            <code style="color: var(--primary-light); font-family: monospace;">••••••••</code>
+                        </td>
+                        <td style="padding: 10px; border-bottom: 1px solid var(--border); text-align: right; color: var(--text-muted);">
+                            Used on <strong>${count}</strong> items
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            // Calculate Grade & qualitative feedback
+            const healthGrade = document.getElementById('healthGrade');
+            const healthIssues = document.getElementById('healthIssues');
+            let score = 100;
+
+            if (totalReuseCount > 0) score -= Math.min(40, totalReuseCount * 5);
+            if (emptyPassCount > 0) score -= Math.min(30, emptyPassCount * 3);
+
+            let statusText = "";
+            let gradeClass = "";
+            if (score >= 90) { statusText = "Excellent vault security."; gradeClass = "grade-a"; healthGrade.textContent = 'A'; }
+            else if (score >= 70) { statusText = "Good, with some minor vulnerabilities."; gradeClass = "grade-b"; healthGrade.textContent = 'B'; }
+            else if (score >= 50) { statusText = "Needs attention. High risk of credential stuffing."; gradeClass = "grade-c"; healthGrade.textContent = 'C'; }
+            else { statusText = "Critical safety risks detected."; gradeClass = "grade-f"; healthGrade.textContent = 'F'; }
+
+            healthIssues.innerHTML = `<span style="font-weight: 500; font-size: 0.9rem;">Status: ${statusText}</span>`;
+            healthGrade.className = 'health-grade ' + gradeClass;
         }
 
         function togglePassword(idx) {
@@ -1143,6 +1407,7 @@
             updateStats();
             updateSelectionBar();
             renderSidebar();
+            saveWorkInProgress();
         }
 
         function bulkAction(shouldScrub) {
@@ -1150,15 +1415,26 @@
                 selectedIndices.forEach(idx => { bitwardenData.items[idx]._isDeleted = shouldScrub; });
                 hasUnsavedChanges = true;
                 clearSelection();
+                saveWorkInProgress();
             });
         }
 
         function autoDedupe() {
             const mode = document.getElementById('dedupeMode').value;
-            const seen = new Set();
+            const masters = new Map(); // key -> masterItem
             let count = 0;
 
-            bitwardenData.items.forEach(item => {
+            // Sort by revisionDate (descending) to prioritize keeping the newest entries
+            // If date is missing, fallback to original order
+            const itemsToProcess = [...bitwardenData.items]
+                .map((item, originalIndex) => ({ item, originalIndex }))
+                .sort((a, b) => {
+                    const dateA = new Date(a.item.revisionDate || 0);
+                    const dateB = new Date(b.item.revisionDate || 0);
+                    return dateB - dateA;
+                });
+
+            itemsToProcess.forEach(({ item, originalIndex }) => {
                 if (item._isDeleted) return;
 
                 const login = item.login || {};
@@ -1201,18 +1477,32 @@
                 else if (mode === 'url_all') key = `${fullUri}|${userLower}|${pass}`;
                 else key = `${domain}|${userLower}|${pass}`; // domain_all (default)
 
-                if (seen.has(key)) {
+                if (masters.has(key)) {
+                    const master = masters.get(key);
                     item._isDeleted = true;
                     item._deleteReason = "Duplicate: " + document.querySelector(`#dedupeMode option[value="${mode}"]`).text;
                     count++;
+
+                    // Smart Merge: Copy unique URIs to the master entry
+                    if (login.uris && master.login.uris) {
+                        const masterUris = new Set(master.login.uris.map(u => (u.uri || "").trim().toLowerCase()));
+                        login.uris.forEach(u => {
+                            const normalized = (u.uri || "").trim().toLowerCase();
+                            if (normalized && !masterUris.has(normalized)) {
+                                master.login.uris.push(u);
+                                masterUris.add(normalized);
+                            }
+                        });
+                    }
                 } else {
-                    seen.add(key);
+                    masters.set(key, item);
                 }
             });
 
             hasUnsavedChanges = true;
             renderTable();
             renderSidebar();
+            saveWorkInProgress();
             alert(`Auto-delete complete. Marked ${count} potential duplicates for removal.`);
         }
 
@@ -1241,16 +1531,94 @@
         }
 
         function downloadJSON() {
-            const final = bitwardenData.items.filter(i => !i._isDeleted).map(({ _isDeleted, ...rest }) => rest);
+            const final = bitwardenData.items.filter(i => !i._isDeleted).map(({ _isDeleted, _deleteReason, ...rest }) => rest);
             const blob = new Blob([JSON.stringify({ ...bitwardenData, items: final }, null, 2)], { type: 'application/json' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = originalFileName.replace('.json', '') + '_deduped.json';
             a.click();
             hasUnsavedChanges = false;
+            // Clear progress on export
+            localStorage.removeItem('wip_audit_' + originalFileName + '_' + bitwardenData.items.length);
+        }
+
+        function saveWorkInProgress() {
+            if (!bitwardenData) return;
+            const key = 'wip_audit_' + originalFileName + '_' + bitwardenData.items.length;
+            const states = bitwardenData.items.map(item => ({
+                deleted: item._isDeleted,
+                reason: item._deleteReason || ""
+            }));
+            localStorage.setItem(key, JSON.stringify(states));
+        }
+
+        function restoreWorkInProgress() {
+            const key = 'wip_audit_' + originalFileName + '_' + bitwardenData.items.length;
+            const saved = localStorage.getItem(key);
+            if (saved) {
+                const states = JSON.parse(saved);
+                if (states.length === bitwardenData.items.length) {
+                    bitwardenData.items.forEach((item, idx) => {
+                        item._isDeleted = states[idx].deleted;
+                        item._deleteReason = states[idx].reason;
+                    });
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function resetApp() {
+            if (confirm('Are you sure you want to reset? This will clear all data and your current progress.')) {
+                localStorage.removeItem('wip_audit_' + originalFileName + '_' + bitwardenData.items.length);
+                location.reload();
+            }
         }
 
         window.onbeforeunload = (e) => { if (hasUnsavedChanges) return "You have unsaved changes!"; };
+
+        // Keyboard Navigation
+        document.addEventListener('keydown', (e) => {
+            if (activeTab === 'dashboard') return;
+            if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+            if (e.key === 'j') { // Up
+                moveFocus(-1);
+            } else if (e.key === 'k') { // Down
+                moveFocus(1);
+            } else if (e.key === 'x') { // Select
+                if (focusedIdx !== -1) toggleSelect(focusedIdx);
+            } else if (e.key.toLowerCase() === 'd' || e.key === 'Delete') { // Delete/Restore
+                if (focusedIdx !== -1) toggleItem(focusedIdx);
+                e.preventDefault();
+            } else if (e.key === 'Enter') { // Reveal
+                if (focusedIdx !== -1) togglePassword(focusedIdx);
+            }
+        });
+
+        function moveFocus(dir) {
+            if (visibleIndices.length === 0) return;
+
+            let currentVisiblePos = visibleIndices.indexOf(focusedIdx);
+            let nextPos = currentVisiblePos + dir;
+
+            if (nextPos < 0) nextPos = 0;
+            if (nextPos >= visibleIndices.length) nextPos = visibleIndices.length - 1;
+
+            const nextIdx = visibleIndices[nextPos];
+
+            if (focusedIdx !== -1) {
+                const oldRow = document.getElementById(`row-${focusedIdx}`);
+                if (oldRow) oldRow.classList.remove('focused');
+            }
+
+            focusedIdx = nextIdx;
+            const newRow = document.getElementById(`row-${focusedIdx}`);
+            if (newRow) {
+                newRow.classList.add('focused');
+                newRow.scrollIntoView({ block: 'nearest', behavior: dir === 0 ? 'auto' : 'smooth' });
+            }
+        }
     </script>
 </body>
 
