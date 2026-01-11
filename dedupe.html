@@ -971,8 +971,8 @@
         let filterDeletedOnly = false;
         let focusedIdx = -1;
         let visibleIndices = [];
-        let dashboardShowPasswords = new Set();
-        let dashboardPasswordMap = {};
+        let dashboardShowIndices = new Set(); // Stores indices (0-4) of revealed passwords
+        let currentDashboardReused = [];
 
         // Theme Handling
         function initTheme() {
@@ -1107,8 +1107,15 @@
             selectedIndices.clear();
             renderSidebar();
 
-            if (isDashboard) renderDashboard();
-            else renderTable();
+            if (isDashboard) {
+                // Only clear if we are actually switching TO dashboard for the first time
+                // But honestly, we want to persist state if just switching back and forth?
+                // For now, let's keep it clean
+                dashboardShowIndices.clear();
+                renderDashboard();
+            } else {
+                renderTable();
+            }
         }
 
         function renderTable() {
@@ -1222,10 +1229,14 @@
                 }
             });
 
+            // Stable sort by count, then alphabetical password
             const reusedList = Object.entries(passReuse)
                 .filter(([_, count]) => count > 1)
-                .sort((a, b) => b[1] - a[1])
+                .sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]))
                 .slice(0, 5);
+
+            // Store for toggle access
+            currentDashboardReused = reusedList.map(([pass, count]) => ({ pass, count }));
 
             const totalReuseCount = reusedList.reduce((acc, curr) => acc + curr[1], 0);
 
@@ -1234,7 +1245,6 @@
             document.getElementById('statDuplicatePass').textContent = totalReuseCount;
             document.getElementById('statEmptyPass').textContent = emptyPassCount;
 
-            // Fix card labels
             const hygieneBody = document.getElementById('hygieneStats');
             hygieneBody.innerHTML = `
                 <div class="issue-item">
@@ -1248,24 +1258,22 @@
             `;
 
             const reuseBody = document.getElementById('statReuseList');
-            dashboardPasswordMap = {};
 
             if (reusedList.length === 0) {
                 reuseBody.innerHTML = `<tr><td style="color: var(--success); text-align: center; padding: 2rem;">No reused passwords found! Great job.</td></tr>`;
             } else {
-                reuseBody.innerHTML = reusedList.map(([pass, count], i) => {
-                    dashboardPasswordMap[i] = pass;
-                    const isRevealed = dashboardShowPasswords.has(pass);
+                reuseBody.innerHTML = currentDashboardReused.map((item, i) => {
+                    const isRevealed = dashboardShowIndices.has(i);
                     return `
-                    <tr>
+                    <tr id="dashboard-reuse-row-${i}">
                         <td style="padding: 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-                            <code style="color: var(--primary-light); font-family: monospace;">${isRevealed ? pass.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : '••••••••'}</code>
+                            <code class="pass-display" style="color: var(--primary-light); font-family: monospace;">${isRevealed ? item.pass.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : '••••••••'}</code>
                             <button class="btn btn-outline" style="padding: 2px 8px; font-size: 0.7rem;" onclick="toggleDashboardPassword(${i})">
                                 ${isRevealed ? 'Hide' : 'Show'}
                             </button>
                         </td>
                         <td style="padding: 10px; border-bottom: 1px solid var(--border); text-align: right; color: var(--text-muted);">
-                            Used on <strong>${count}</strong> items
+                            Used on <strong>${item.count}</strong> items
                         </td>
                     </tr>
                 `;
@@ -1291,13 +1299,23 @@
             healthGrade.className = 'health-grade ' + gradeClass;
         }
 
-        function toggleDashboardPassword(idx) {
-            const pass = dashboardPasswordMap[idx];
-            if (!pass) return;
+        function toggleDashboardPassword(i) {
+            if (dashboardShowIndices.has(i)) dashboardShowIndices.delete(i);
+            else dashboardShowIndices.add(i);
 
-            if (dashboardShowPasswords.has(pass)) dashboardShowPasswords.delete(pass);
-            else dashboardShowPasswords.add(pass);
-            renderDashboard();
+            // Localized DOM update
+            const row = document.getElementById(`dashboard-reuse-row-${i}`);
+            if (row) {
+                const isRevealed = dashboardShowIndices.has(i);
+                const item = currentDashboardReused[i];
+                if (!item) return;
+
+                const codeEl = row.querySelector('.pass-display');
+                const btnEl = row.querySelector('button');
+
+                if (codeEl) codeEl.textContent = isRevealed ? item.pass : '••••••••';
+                if (btnEl) btnEl.textContent = isRevealed ? 'Hide' : 'Show';
+            }
         }
 
         function togglePassword(idx) {
