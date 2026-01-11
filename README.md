@@ -19,14 +19,21 @@ A high-performance, secure, and modern web-based tool for cleaning up duplicate 
 
 ## 📸 Interface
 
-<p align="center">
-  <img src="interface/screenshots/dashboard.png" alt="Main Dashboard" width="400">
-  <img src="interface/screenshots/review.png" alt="Review Mode" width="400">
-</p>
-<p align="center">
-  <img src="interface/screenshots/strategies.png" alt="Delete Strategies" width="400">
-  <img src="interface/screenshots/automation.png" alt="Auto-Delete Logic" width="400">
-</p>
+### 🖥️ Main Dashboard
+Overview of the vault grouped by domain with real-time stats and theme controls.
+![Main Dashboard](interface/screenshots/dashboard.png)
+
+### 🔍 Review Mode
+Audit deleted items with a dedicated "Reason" column and filtered sidebar navigation.
+![Review Mode](interface/screenshots/review.png)
+
+### ⚙️ Delete Strategies
+Multiple matching algorithms to catch everything from exact duplicates to junk entries.
+![Delete Strategies](interface/screenshots/strategies.png)
+
+### 🤖 Automation Logic
+Instant feedback on auto-deletion counts and secure password masking.
+![Auto-Delete Logic](interface/screenshots/automation.png)
 
 ## 🛠️ Delete Strategies
 
