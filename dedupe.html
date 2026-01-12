@@ -31,7 +31,8 @@
             --success: #28c76f;
             --accent: #175ddc;
             --sidebar-w: 260px;
-            --transition: all 0.2s ease-in-out;
+            /* Optimization: Animate only colors, avoid layout/transform properties */
+            --transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
         }
 
         body.light-mode {
@@ -1025,14 +1026,25 @@
         }
 
         function toggleTheme() {
-            const isLight = document.body.classList.toggle('light-mode');
-            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+            // "Last Resort" UX: Show loader to mask the heavy repaint cost
+            withLoader(() => {
+                return new Promise(resolve => {
+                    // Force a layout/paint frame so the loader appears
+                    requestAnimationFrame(() => {
+                        const isLight = document.body.classList.toggle('light-mode');
+                        localStorage.setItem('theme', isLight ? 'light' : 'dark');
 
-            const icon = document.getElementById('themeToggleIcon');
-            const term = document.getElementById('themeToggleText');
+                        const icon = document.getElementById('themeToggleIcon');
+                        const term = document.getElementById('themeToggleText');
 
-            icon.textContent = isLight ? '☀️' : '🌙';
-            term.textContent = isLight ? 'Light Mode' : 'Dark Mode';
+                        icon.textContent = isLight ? '☀️' : '🌙';
+                        term.textContent = isLight ? 'Light Mode' : 'Dark Mode';
+
+                        // Allow browser to repaint the new theme while loader is still up
+                        requestAnimationFrame(resolve);
+                    });
+                });
+            });
         }
 
         // Initialize theme immediately

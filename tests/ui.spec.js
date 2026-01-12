@@ -18,6 +18,9 @@ test.describe('UI Interactions', () => {
 
         // Switch to light
         await toggleBtn.click();
+
+        // Wait for loader to disappear if it appears, then check class
+        await expect(page.locator('#loaderOverlay')).toBeHidden();
         await expect(page.locator('body')).toHaveClass(/light-mode/);
         await expect(page.locator('#themeToggleText')).toHaveText('Light Mode');
 
