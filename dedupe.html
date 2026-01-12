@@ -63,6 +63,15 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+
+        /* Optimization: Scope outline color to interactive elements only */
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible,
+        button:focus-visible,
+        a:focus-visible,
+        [tabindex]:focus-visible {
             outline-color: var(--primary);
         }
 
