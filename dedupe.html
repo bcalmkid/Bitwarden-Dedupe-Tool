@@ -484,6 +484,11 @@
             border-color: var(--text-muted);
         }
 
+        .btn:disabled {
+            cursor: not-allowed !important;
+            opacity: 0.5 !important;
+        }
+
         .select-sm {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -628,7 +633,7 @@
         /* Dashboard Styles */
         .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
             gap: 1.5rem;
             padding: 1.5rem;
         }
@@ -823,6 +828,11 @@
                     <span id="themeToggleIcon">🌙</span>
                     <span id="themeToggleText">Dark Mode</span>
                 </button>
+                <button class="btn btn-outline" onclick="undoLastAction()" id="undoBtn" disabled
+                    title="Undo last delete">
+                    <span>↩️</span>
+                    <span>Undo</span>
+                </button>
                 <button class="btn btn-outline" onclick="resetApp()" title="Clear all and start over">
                     <span>🔄</span>
                     <span>Reset</span>
@@ -973,6 +983,8 @@
         let visibleIndices = [];
         let dashboardShowIndices = new Set(); // Stores indices (0-4) of revealed passwords
         let currentDashboardReused = [];
+        let dashboardStatsDirty = true;
+        let undoStack = []; // Stores actions { type: 'toggle'|'bulk', ... }
 
         // Theme Handling
         function initTheme() {
@@ -981,6 +993,23 @@
                 document.body.classList.add('light-mode');
                 document.getElementById('themeToggleIcon').textContent = '☀️';
                 document.getElementById('themeToggleText').textContent = 'Light Mode';
+            }
+        }
+
+        function resetApp() {
+            if (confirm("Are you sure? This will clear all loaded data.")) {
+                bitwardenData = null;
+                document.getElementById('fileInput').value = '';
+                document.getElementById('app').classList.add('hidden');
+                document.getElementById('uploadOverlay').classList.remove('hidden');
+                localStorage.removeItem('wip_audit_' + originalFileName + '_' + (bitwardenData ? bitwardenData.items.length : 0));
+
+                // Clear state
+                undoStack = [];
+                updateUndoUI();
+                selectedIndices.clear();
+                showPasswords.clear();
+                dashboardShowIndices.clear();
             }
         }
 
@@ -1014,6 +1043,33 @@
             if (file) handleFile({ target: { files: [file] } });
         });
 
+        // Event Delegation for Table Body
+        itemsTableBody.addEventListener('click', (e) => {
+            const row = e.target.closest('tr');
+            if (!row) return;
+            const index = parseInt(row.dataset.index);
+            if (isNaN(index)) return;
+
+            // 1. Password Toggle
+            if (e.target.closest('.action-toggle-pass')) {
+                togglePassword(index);
+                return;
+            }
+
+            // 2. Delete/Restore Action
+            if (e.target.closest('.action-delete')) {
+                toggleItem(index);
+                return;
+            }
+
+            // 3. Selection (Checkbox or Row Click)
+            // Note: If clicking the checkbox directly, we prevent propagation?
+            // Actually, for custom styled checkbox/row clicks, we just trigger toggleSelect
+            // If the user clicked the actual input, it toggles state. toggleSelect handles the logic.
+            // To prevent double-toggling if clicking label wrapping input, we trust the handler.
+            toggleSelect(index);
+        });
+
         function handleFile(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -1030,7 +1086,13 @@
 
                             // Keep only Login items (type 1) and ignore cards, identities, etc.
                             bitwardenData.items = bitwardenData.items.filter(item => item.type === 1);
-                            bitwardenData.items.forEach(item => item._isDeleted = false);
+
+                            // Pre-calculate expensive fields
+                            bitwardenData.items.forEach(item => {
+                                item._isDeleted = false;
+                                item._hostname = getBaseUrl(item); // Store once
+                                item._timestamp = item.revisionDate ? new Date(item.revisionDate).getTime() : 0;
+                            });
 
                             if (restoreWorkInProgress()) {
                                 hasUnsavedChanges = true;
@@ -1058,8 +1120,10 @@
 
             try {
                 let raw = login.uris[0].uri || "";
+                if (!raw.trim()) return "No Domain";
                 if (!raw.includes('://')) raw = 'http://' + raw;
-                return new URL(raw).hostname.replace('www.', '');
+                const host = new URL(raw).hostname.replace('www.', '');
+                return host || "No Domain";
             } catch { return "Misc URL"; }
         }
 
@@ -1069,7 +1133,7 @@
             bitwardenData.items.forEach(item => {
                 if (filterDeletedOnly && !item._isDeleted) return; // Review Mode: Only count deleted
 
-                const url = getBaseUrl(item);
+                const url = item._hostname || getBaseUrl(item);
                 groups[url] = (groups[url] || 0) + 1;
                 groups['all']++;
             });
@@ -1088,8 +1152,10 @@
                     <span>🛡️ Health Report</span>
                 </div>
             ` + sortedKeys.map(key => `
-                <div class="nav-item ${activeTab === key ? 'active' : ''}" onclick="setTab('${key}')">
-                    <span>${key === 'all' ? 'All Items' : key}</span>
+                <div class="nav-item ${activeTab === key ? 'active' : ''}" onclick="setTab('${key}')" title="${key}">
+                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin-right: 8px;">
+                        ${key === 'all' ? 'All Items' : key}
+                    </span>
                     <span class="count">${groups[key]}</span>
                 </div>
             `).join('');
@@ -1152,21 +1218,17 @@
                     : '';
 
                 return `
-                    <tr id="row-${index}" class="${isDeleted ? 'deleted' : ''} ${isSelected ? 'selected' : ''} ${isFocused ? 'focused' : ''}" onclick="toggleSelect(${index})">
+                    <tr id="row-${index}" data-index="${index}" class="${isDeleted ? 'deleted' : ''} ${isSelected ? 'selected' : ''} ${isFocused ? 'focused' : ''}">
                         <td class="checkbox-cell">
-                            <input type="checkbox" class="custom-checkbox" 
-                                   ${isSelected ? 'checked' : ''} 
-                                   onclick="event.stopPropagation(); toggleSelect(${index})">
+                            <input type="checkbox" class="custom-checkbox" ${isSelected ? 'checked' : ''}>
                         </td>
                         <td>
                             <div class="field-box" style="gap: 2px;">
-                                <div class="truncator field-value" onmouseenter="checkTruncation(this)" style="font-weight: 600; color: var(--text-heading); font-size: 0.95rem;">
-                                    <span class="truncator-text">${name}</span>
-                                    <span class="truncator-popover">${name}</span>
+                                <div class="field-value" title="${name}" style="font-weight: 600; color: var(--text-heading); font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    ${name}
                                 </div>
-                                <div class="truncator field-sub" onmouseenter="checkTruncation(this)" style="font-size: 0.85rem;">
-                                    <span class="truncator-text">${login.username || 'No username'}</span>
-                                    <span class="truncator-popover">${login.username || 'No username'}</span>
+                                <div class="field-sub" title="${login.username || ''}" style="font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    ${login.username || 'No username'}
                                 </div>
                             </div>
                         </td>
@@ -1174,22 +1236,19 @@
                         <td>
                             <div class="field-box">
                                 <div class="password-container" style="display:flex; justify-content:space-between; align-items:center;">
-                                    <div class="truncator password-val" onmouseenter="checkTruncation(this)" 
-                                         style="flex:1; margin-right:8px; ${!login.password ? 'color:var(--danger); font-style:italic;' : ''}">
-                                        <span class="truncator-text">${login.password ? (isRevealed ? login.password : '••••••••') : 'Empty'}</span>
-                                        <span class="truncator-popover">${login.password ? (isRevealed ? login.password : '••••••••') : 'Empty'}</span>
+                                    <div class="password-val" title="${isRevealed ? (login.password || '') : '••••••••'}" 
+                                         style="flex:1; margin-right:8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${!login.password ? 'color:var(--danger); font-style:italic;' : ''}">
+                                        ${login.password ? (isRevealed ? login.password : '••••••••') : 'Empty'}
                                     </div>
-                                    <button class="btn btn-outline" style="padding:2px 6px; font-size:10px; flex-shrink: 0;" 
-                                            onclick="event.stopPropagation(); togglePassword(${index})">
+                                    <button class="btn btn-outline action-toggle-pass" style="padding:2px 6px; font-size:10px; flex-shrink: 0;">
                                         ${isRevealed ? 'Hide' : 'Show'}
                                     </button>
                                 </div>
                             </div>
                         </td>
                         <td class="action-cell">
-                            <button class="btn ${isDeleted ? 'btn-outline' : 'btn-danger'}" 
-                                    style="min-width: 80px; justify-content: center;"
-                                    onclick="event.stopPropagation(); toggleItem(${index})">
+                            <button class="btn ${isDeleted ? 'btn-outline' : 'btn-danger'} action-delete" 
+                                    style="min-width: 80px; justify-content: center;">
                                 ${isDeleted ? 'Restore' : 'Delete'}
                             </button>
                         </td>
@@ -1211,6 +1270,8 @@
         }
 
         function renderDashboard() {
+            if (!dashboardStatsDirty) return;
+
             const items = bitwardenData.items;
             const passReuse = {};
             let emptyPassCount = 0;
@@ -1220,7 +1281,7 @@
                 if (item._isDeleted) return;
                 const login = item.login || {};
                 const pass = login.password;
-                const dom = getBaseUrl(item);
+                const dom = item._hostname || getBaseUrl(item);
 
                 if (dom !== "Misc URL") domains.add(dom);
                 if (!pass) emptyPassCount++;
@@ -1297,6 +1358,8 @@
 
             healthIssues.innerHTML = `<span style="font-weight: 500; font-size: 0.9rem;">Status: ${statusText}</span>`;
             healthGrade.className = 'health-grade ' + gradeClass;
+
+            dashboardStatsDirty = false;
         }
 
         function toggleDashboardPassword(i) {
@@ -1331,29 +1394,21 @@
                 const isEmpty = !login.password;
 
                 const container = row.querySelector('.password-container');
-                const tWrap = container.querySelector('.truncator');
-                const tText = container.querySelector('.truncator-text');
-                const tPop = container.querySelector('.truncator-popover');
+                const pVal = container.querySelector('.password-val');
                 const btn = container.querySelector('button');
 
-                if (tWrap) tWrap.style.color = isEmpty ? 'var(--danger)' : '';
-                if (tWrap) tWrap.style.fontStyle = isEmpty ? 'italic' : '';
-                if (tText) tText.textContent = text;
-                if (tPop) tPop.textContent = text;
+                if (pVal) {
+                    pVal.style.color = isEmpty ? 'var(--danger)' : '';
+                    pVal.style.fontStyle = isEmpty ? 'italic' : '';
+                    pVal.textContent = text;
+                    pVal.title = text;
+                }
                 if (btn) btn.textContent = isRevealed ? 'Hide' : 'Show';
-
-                // Re-check truncation after text change
-                if (tWrap) checkTruncation(tWrap);
             }
         }
 
         function checkTruncation(el) {
-            const text = el.querySelector('.truncator-text');
-            if (text && text.scrollWidth > text.clientWidth) {
-                el.classList.add('can-truncate');
-            } else {
-                el.classList.remove('can-truncate');
-            }
+            // No longer used, but kept as no-op to avoid potential errors if called elsewhere
         }
 
         function toggleBulkReveal() {
@@ -1424,8 +1479,13 @@
             document.getElementById('removedCount').textContent = removed;
         }
 
-        function toggleItem(idx) {
+        function toggleItem(idx, isUndo = false) {
             const item = bitwardenData.items[idx];
+
+            if (!isUndo) {
+                pushUndo({ type: 'toggle', index: idx });
+            }
+
             item._isDeleted = !item._isDeleted;
             hasUnsavedChanges = true;
 
@@ -1435,10 +1495,10 @@
                 const isDeleted = item._isDeleted;
                 row.classList.toggle('deleted', isDeleted);
 
-                const actionBtn = row.querySelector('.action-cell button');
+                const actionBtn = row.querySelector('.action-delete');
                 if (actionBtn) {
                     actionBtn.textContent = isDeleted ? 'Restore' : 'Delete';
-                    actionBtn.className = `btn ${isDeleted ? 'btn-outline' : 'btn-danger'}`;
+                    actionBtn.className = `btn ${isDeleted ? 'btn-outline' : 'btn-danger'} action-delete`;
                 }
             }
 
@@ -1446,14 +1506,63 @@
             updateSelectionBar();
             renderSidebar();
             saveWorkInProgress();
+            dashboardStatsDirty = true;
+        }
+
+        function pushUndo(action) {
+            undoStack.push(action);
+            if (undoStack.length > 50) undoStack.shift(); // Limit stack size
+            updateUndoUI();
+        }
+
+        function undoLastAction() {
+            const action = undoStack.pop();
+            if (!action) return;
+
+            if (action.type === 'toggle') {
+                toggleItem(action.index, true);
+            } else if (action.type === 'bulk') {
+                withLoader(() => {
+                    action.indices.forEach(idx => {
+                        bitwardenData.items[idx]._isDeleted = action.previousState;
+                        if (!action.previousState) {
+                            delete bitwardenData.items[idx]._deleteReason;
+                        }
+                    });
+                    hasUnsavedChanges = true;
+                    // Full re-render needed for bulk
+                    renderTable();
+                    updateStats();
+                    renderSidebar();
+                    saveWorkInProgress();
+                    dashboardStatsDirty = true;
+                });
+            }
+            updateUndoUI();
+        }
+
+        function updateUndoUI() {
+            const btn = document.getElementById('undoBtn');
+            if (btn) {
+                btn.disabled = undoStack.length === 0;
+                btn.style.opacity = undoStack.length === 0 ? 0.5 : 1;
+            }
         }
 
         function bulkAction(shouldScrub) {
             withLoader(() => {
+                // Save state before changing
+                pushUndo({
+                    type: 'bulk',
+                    indices: Array.from(selectedIndices),
+                    previousState: !shouldScrub // If we are scrubbing (true), previous was false
+                });
+
                 selectedIndices.forEach(idx => { bitwardenData.items[idx]._isDeleted = shouldScrub; });
                 hasUnsavedChanges = true;
                 clearSelection();
                 saveWorkInProgress();
+                dashboardStatsDirty = true;
             });
         }
 
@@ -1461,16 +1570,13 @@
             const mode = document.getElementById('dedupeMode').value;
             const masters = new Map(); // key -> masterItem
             let count = 0;
+            let autoDeletedIndices = [];
 
             // Sort by revisionDate (descending) to prioritize keeping the newest entries
             // If date is missing, fallback to original order
             const itemsToProcess = [...bitwardenData.items]
                 .map((item, originalIndex) => ({ item, originalIndex }))
-                .sort((a, b) => {
-                    const dateA = new Date(a.item.revisionDate || 0);
-                    const dateB = new Date(b.item.revisionDate || 0);
-                    return dateB - dateA;
-                });
+                .sort((a, b) => b.item._timestamp - a.item._timestamp);
 
             itemsToProcess.forEach(({ item, originalIndex }) => {
                 if (item._isDeleted) return;
@@ -1487,6 +1593,7 @@
                         item._isDeleted = true;
                         item._deleteReason = "Scrub: Incomplete";
                         count++;
+                        autoDeletedIndices.push(originalIndex);
                     }
                     return;
                 }
@@ -1496,6 +1603,7 @@
                         item._isDeleted = true;
                         item._deleteReason = "Scrub: Empty User & Pass";
                         count++;
+                        autoDeletedIndices.push(originalIndex);
                     }
                     return;
                 }
@@ -1505,7 +1613,7 @@
 
                 const name = (item.name || "").trim().toLowerCase();
                 const fullUri = (login.uris && login.uris.length > 0) ? (login.uris[0].uri || "").trim().toLowerCase() : "none";
-                const domain = getBaseUrl(item).toLowerCase();
+                const domain = (item._hostname || getBaseUrl(item)).toLowerCase();
                 const userLower = user.toLowerCase();
 
                 let key;
@@ -1520,6 +1628,7 @@
                     item._isDeleted = true;
                     item._deleteReason = "Duplicate: " + document.querySelector(`#dedupeMode option[value="${mode}"]`).text;
                     count++;
+                    autoDeletedIndices.push(originalIndex);
 
                     // Smart Merge: Copy unique URIs to the master entry
                     if (login.uris && master.login.uris) {
@@ -1537,10 +1646,19 @@
                 }
             });
 
+            if (autoDeletedIndices.length > 0) {
+                pushUndo({
+                    type: 'bulk',
+                    indices: autoDeletedIndices,
+                    previousState: false // They were active (false), so undoing restores them to active
+                });
+            }
+
             hasUnsavedChanges = true;
             renderTable();
             renderSidebar();
             saveWorkInProgress();
+            dashboardStatsDirty = true;
             alert(`Auto-delete complete. Marked ${count} potential duplicates for removal.`);
         }
 
