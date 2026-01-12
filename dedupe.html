@@ -988,6 +988,17 @@
         let dashboardStatsDirty = true;
         let undoStack = []; // Stores actions { type: 'toggle'|'bulk', ... }
 
+        // Security: Input Sanitization
+        function escapeHtml(unsafe) {
+            if (unsafe == null) return "";
+            return String(unsafe)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         // Theme Handling
         function initTheme() {
             const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -1155,9 +1166,9 @@
                     <span>🛡️ Health Report</span>
                 </div>
             ` + sortedKeys.map(key => `
-                <div class="nav-item ${activeTab === key ? 'active' : ''}" onclick="setTab('${key}')" title="${key}">
+                <div class="nav-item ${activeTab === key ? 'active' : ''}" onclick="setTab(this.dataset.key)" data-key="${escapeHtml(key)}" title="${escapeHtml(key)}">
                     <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin-right: 8px;">
-                        ${key === 'all' ? 'All Items' : key}
+                        ${key === 'all' ? 'All Items' : escapeHtml(key)}
                     </span>
                     <span class="count">${groups[key]}</span>
                 </div>
@@ -1209,15 +1220,19 @@
 
             const rowsHtml = filtered.map(({ item, index }) => {
                 const login = item.login || {};
-                const name = item.name || 'Unnamed';
-                const uri = (login.uris && login.uris.length > 0) ? login.uris[0].uri : "N/A";
+                const name = escapeHtml(item.name || 'Unnamed');
+                const username = escapeHtml(login.username || 'No username');
+                const usernameRaw = escapeHtml(login.username || '');
+                const passwordRaw = login.password ? escapeHtml(login.password) : '';
+
                 const isRevealed = showAllPasswords !== showPasswords.has(index);
                 const isSelected = selectedIndices.has(index);
                 const isDeleted = item._isDeleted;
                 const isFocused = index === focusedIdx;
+                const deleteReason = escapeHtml(item._deleteReason || 'Manual Delete');
 
                 const reasonCell = filterDeletedOnly
-                    ? `<td><span class="reason-badge">${item._deleteReason || 'Manual Delete'}</span></td>`
+                    ? `<td><span class="reason-badge">${deleteReason}</span></td>`
                     : '';
 
                 return `
@@ -1230,8 +1245,8 @@
                                 <div class="field-value" title="${name}" style="font-weight: 600; color: var(--text-heading); font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                     ${name}
                                 </div>
-                                <div class="field-sub" title="${login.username || ''}" style="font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                    ${login.username || 'No username'}
+                                <div class="field-sub" title="${usernameRaw}" style="font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    ${username}
                                 </div>
                             </div>
                         </td>
@@ -1239,9 +1254,9 @@
                         <td>
                             <div class="field-box">
                                 <div class="password-container" style="display:flex; justify-content:space-between; align-items:center;">
-                                    <div class="password-val" title="${isRevealed ? (login.password || '') : '••••••••'}" 
+                                    <div class="password-val" title="${isRevealed ? passwordRaw : '••••••••'}"
                                          style="flex:1; margin-right:8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${!login.password ? 'color:var(--danger); font-style:italic;' : ''}">
-                                        ${login.password ? (isRevealed ? login.password : '••••••••') : 'Empty'}
+                                        ${login.password ? (isRevealed ? passwordRaw : '••••••••') : 'Empty'}
                                     </div>
                                     <button class="btn btn-outline action-toggle-pass" style="padding:2px 6px; font-size:10px; flex-shrink: 0;">
                                         ${isRevealed ? 'Hide' : 'Show'}
@@ -1332,7 +1347,7 @@
                     return `
                     <tr id="dashboard-reuse-row-${i}">
                         <td style="padding: 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-                            <code class="pass-display" style="color: var(--primary-light); font-family: monospace;">${isRevealed ? item.pass.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : '••••••••'}</code>
+                            <code class="pass-display" style="color: var(--primary-light); font-family: monospace;">${isRevealed ? escapeHtml(item.pass) : '••••••••'}</code>
                             <button class="btn btn-outline" style="padding: 2px 8px; font-size: 0.7rem;" onclick="toggleDashboardPassword(${i})">
                                 ${isRevealed ? 'Hide' : 'Show'}
                             </button>

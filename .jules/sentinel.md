@@ -1,0 +1,4 @@
+## 2024-03-25 - XSS Vulnerability in Bitwarden Deduplicator
+**Vulnerability:** Found a Cross-Site Scripting (XSS) vulnerability in `dedupe.html` where user-controlled data (vault entry names, usernames, passwords) was being inserted directly into the DOM using template literals without sanitization. This could allow malicious scripts embedded in a Bitwarden export to execute in the context of the application.
+**Learning:** Even in local-only, single-file applications, XSS is a critical risk if the application processes external data files (like JSON exports) and renders their content. The assumption that "it runs locally" doesn't protect against malicious input files.
+**Prevention:** Always sanitize user-controlled input before rendering it to HTML. Use a dedicated escaping function (replacing `<`, `>`, `&`, `"`, `'`) for any data interpolated into HTML strings.
