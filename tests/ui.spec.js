@@ -44,7 +44,7 @@ test.describe('UI Interactions', () => {
 
     test('Password Reveal should toggle mask', async ({ page }) => {
         const row = page.locator('#itemsTableBody tr').nth(0);
-        const passVal = row.locator('.password-val .truncator-text').first(); // Truncator text might be duped in DOM
+        const passVal = row.locator('.password-val');
         const toggleBtn = row.locator('.password-container button');
 
         await expect(passVal).toHaveText('••••••••');

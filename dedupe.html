@@ -939,12 +939,14 @@
                             <span class="stat-title">Password Hygiene</span>
                             <div class="issue-list" id="hygieneStats">
                                 <div class="issue-item">
-                                    <div class="indicator red"></div>
-                                    <span><strong id="statDuplicatePass">0</strong> Reused Passwords</span>
+                                    <div class="indicator red" id="indicatorDuplicate"></div>
+                                    <span><strong id="statDuplicatePass">0</strong> <span id="labelDuplicate">Reused
+                                            Passwords</span></span>
                                 </div>
                                 <div class="issue-item">
-                                    <div class="indicator yellow"></div>
-                                    <span><strong id="statEmptyPass">0</strong> Missing Passwords</span>
+                                    <div class="indicator yellow" id="indicatorEmpty"></div>
+                                    <span><strong id="statEmptyPass">0</strong> <span id="labelEmpty">Missing
+                                            Passwords</span></span>
                                 </div>
                             </div>
                         </div>
@@ -1102,6 +1104,7 @@
                             app.classList.remove('hidden');
                             renderSidebar();
                             renderTable();
+                            dashboardStatsDirty = true;
                             resolve();
                         } catch (err) {
                             alert("Error: " + err.message);
@@ -1199,7 +1202,7 @@
             `;
 
             const filtered = bitwardenData.items.map((item, index) => ({ item, index }))
-                .filter(entry => activeTab === 'all' || getBaseUrl(entry.item) === activeTab)
+                .filter(entry => activeTab === 'all' || entry.item._hostname === activeTab)
                 .filter(entry => !filterDeletedOnly || entry.item._isDeleted); // Review Mode Filter
 
             visibleIndices = filtered.map(f => f.index);
@@ -1270,6 +1273,7 @@
         }
 
         function renderDashboard() {
+            console.log('renderDashboard: dirty=', dashboardStatsDirty);
             if (!dashboardStatsDirty) return;
 
             const items = bitwardenData.items;
@@ -1306,17 +1310,17 @@
             document.getElementById('statDuplicatePass').textContent = totalReuseCount;
             document.getElementById('statEmptyPass').textContent = emptyPassCount;
 
-            const hygieneBody = document.getElementById('hygieneStats');
-            hygieneBody.innerHTML = `
-                <div class="issue-item">
-                    <div class="indicator ${totalReuseCount > 0 ? 'red' : 'green'}"></div>
-                    <span><strong>${totalReuseCount}</strong> ${totalReuseCount === 1 ? 'Reused Password' : 'Reused Passwords'}</span>
-                </div>
-                <div class="issue-item">
-                    <div class="indicator ${emptyPassCount > 0 ? 'yellow' : 'green'}"></div>
-                    <span><strong>${emptyPassCount}</strong> ${emptyPassCount === 1 ? 'Missing Password' : 'Missing Passwords'}</span>
-                </div>
-            `;
+            // Update Hygiene Indicators/Text
+            const dupIndicator = document.getElementById('indicatorDuplicate');
+            const emptyIndicator = document.getElementById('indicatorEmpty');
+            const dupLabel = document.getElementById('labelDuplicate');
+            const emptyLabel = document.getElementById('labelEmpty');
+
+            if (dupIndicator) dupIndicator.className = `indicator ${totalReuseCount > 0 ? 'red' : 'green'}`;
+            if (emptyIndicator) emptyIndicator.className = `indicator ${emptyPassCount > 0 ? 'yellow' : 'green'}`;
+
+            if (dupLabel) dupLabel.textContent = totalReuseCount === 1 ? 'Reused Password' : 'Reused Passwords';
+            if (emptyLabel) emptyLabel.textContent = emptyPassCount === 1 ? 'Missing Password' : 'Missing Passwords';
 
             const reuseBody = document.getElementById('statReuseList');
 
@@ -1477,6 +1481,18 @@
             const removed = items.filter(i => i._isDeleted).length;
             document.getElementById('totalCount').textContent = items.length;
             document.getElementById('removedCount').textContent = removed;
+        }
+
+        function toggleReviewMode(el) {
+            filterDeletedOnly = el.checked;
+            renderTable();
+            renderSidebar();
+        }
+
+        function toggleBulkReveal() {
+            showAllPasswords = !showAllPasswords;
+            document.getElementById('bulkRevealBtn').textContent = showAllPasswords ? 'Mask all passwords' : 'Reveal all passwords';
+            renderTable();
         }
 
         function toggleItem(idx, isUndo = false) {
